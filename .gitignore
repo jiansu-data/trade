@@ -1,0 +1,5 @@
+.idea
+data/historical_data.h5
+src
+*.pyc
+backtrader

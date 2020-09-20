@@ -1,0 +1,306 @@
+from datetime import datetime
+import backtrader as bt
+import helper.datah5 as datah5
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import multiprocessing as mp
+
+class StrategyLogger(bt.SignalStrategy):
+    log_enable = True
+
+    def __init__(self,log_enable = True):
+        pass
+
+    def log(self, txt, dt=None):
+        ''' Logging function for this strategy'''
+        dt = dt or self.datas[0].datetime.date(0)
+        if self.log_enable:
+            print('%s, %s' % (dt.isoformat(), txt))
+
+    def notify_order(self, order):
+        if order.status in [order.Submitted, order.Accepted]:
+            # Buy/Sell order submitted/accepted to/by broker - Nothing to do
+            return
+
+        # Check if an order has been completed
+        # Attention: broker could reject order if not enough cash
+        if order.status in [order.Completed]:
+            if order.isbuy():
+                self.log('BUY EXECUTED, %.2f' % order.executed.price)
+            elif order.issell():
+                self.log('SELL EXECUTED, %.2f' % order.executed.price)
+
+            self.bar_executed = len(self)
+
+        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
+            self.log('Order Canceled/Margin/Rejected')
+
+        # Write down: no pending order
+        self.order = None
+    def notify_trade(self, trade):
+        if not trade.isclosed:
+            return
+
+        self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
+                 (trade.pnl, trade.pnlcomm))
+
+class BBS(StrategyLogger):
+    def __init__(self):
+        self.bb= bt.ind.BBands(period=20)
+
+
+        self.cross_up_mid = bt.ind.CrossUp(self.data.close, self.bb.mid)
+        self.cross_up_bot = bt.ind.CrossUp(self.data.close, self.bb.bot)
+        #self.signal_add(bt.SIGNAL_LONG, self.cross_up_mid)
+
+        self.crossdown_top = bt.ind.CrossDown(self.data.close, self.bb.top)
+        self.crossdown_mid = bt.ind.CrossDown(self.data.close, self.bb.mid)
+        #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
+
+
+    def next(self):
+        #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
+        #self.log('Close, %.2f' % self.data.close[0])
+        if not self.position:
+            #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
+            if self.cross_up_mid[0]:
+                self.log('BUY CREATE, %.2f' % self.data.close[0])
+                self.buy()
+            if self.cross_up_bot[0] and self.bb.mid[0] > self.bb.mid[-2]:
+                self.log('BUY CREATE, %.2f' % self.data.close[0])
+                self.buy()
+            #crossover = bt.ind.CrossUp(self.data.close, self.bb.mid)
+            #self.signal_add(bt.SIGNAL_LONG, crossover)
+            #pass
+        #if self.cross_up_mid[0] == True:
+        #    self.buy()
+        else:
+            #if self.crossdown_top:
+            #    self.close()
+            if self.crossdown_mid:
+                self.log('CLOSE CREATE, %.2f' % self.data.close[0])
+                self.close()
+
+            # if self.bb.mid[0] < self.bb.mid[1]:
+                #
+                #self.close()
+            #    pass
+
+        #if self.crossdown_top[0] == True:
+            #self.sell(size=1)
+        #    self.close()
+        pass
+
+class MACDS(bt.SignalStrategy):
+    def __init__(self):
+        self.macd= bt.ind.MACDHisto()
+
+        self.crossup = bt.ind.CrossUp(self.macd.macd, self.macd.signal)
+        self.crossdown = bt.ind.CrossDown(self.macd.macd, self.macd.signal)
+        #self.signal_add(bt.SIGNAL_LONG, self.cross_up_mid)
+        #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
+    def next(self):
+        #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
+        if not self.position:
+            #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
+            if self.crossup:
+                self.buy()
+        else:
+
+            if self.crossdown:
+                self.close()
+
+        pass
+
+class KDS(bt.SignalStrategy):
+    def __init__(self):
+        self.kds = bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
+
+        self.crossup = bt.ind.CrossUp(self.kds.lines.percK, self.kds.lines.percD)
+        self.crossdown = bt.ind.CrossDown(self.kds.lines.percK, self.kds.lines.percD)
+    def next(self):
+        #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
+        if not self.position:
+            #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
+            #if self.kds.k > self.kds.d:
+            if self.crossup:
+                #print("up",self.crossup)
+                self.buy()
+        else:
+            #if self.kds.k < self.kds.d:
+            if self.crossdown:
+                #print("down", self.crossdown)
+                self.close()
+        pass
+
+class RSIS(bt.SignalStrategy):
+    def __init__(self):
+        self.rsi = bt.ind.RelativeStrengthIndex()
+
+        #self.signal_add(bt.SIGNAL_LONG, self.cross_up_mid)
+        #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
+        self.hold = False
+    def next(self):
+        #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
+        if not self.position:
+            #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
+            #if self.kds.k > self.kds.d:
+            if self.rsi.rsi <30:
+                #print("up",self.crossup)
+                self.hold = True
+                self.buy()
+        else:
+            #if self.kds.k < self.kds.d:
+            if self.rsi.rsi  >70:
+                #print("down", self.crossdown)
+                self.hold = False
+                self.close()
+
+        pass
+
+def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False):
+    from datetime import datetime
+    import backtrader as bt
+    import helper.datah5 as datah5
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+    #print(stock_id)
+    cerebro = bt.Cerebro()
+    cerebro.addstrategy(strategy)
+    strategy.log_enable = enable_log
+
+    data0 = datah5.datafromh5( stock_id=stock_id,fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31))
+    cerebro.adddata(data0)
+    cerebro.addsizer(bt.sizers.AllInSizer)
+    #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
+    cerebro.addanalyzer(bt.analyzers.DrawDown)
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
+    cerebro.addanalyzer(bt.analyzers.Returns)
+    cerebro.addanalyzer(bt.analyzers.PyFolio)
+    strats = cerebro.run()
+    result = {}
+    for e in strats[0].analyzers:
+        if result_show :print(type(e),e.get_analysis())
+        result[type(e).__name__] = e.get_analysis()
+    if plot:cerebro.plot()
+
+    return result
+
+def db_attr(db,attr,f):
+    l = {}
+    for e in db:
+        #print(e,db[e][attr])
+        l[e] = f(db[e][attr])
+    return l
+
+def db_attrs(db,attr,f):
+    df = pd.DataFrame()
+    for e in db:
+        #print(e,db[e][attr])
+        df_ = pd.DataFrame(f(db[e][attr]))
+        df_.rename(index={0:str(e),'Backtest':str(e)},inplace=True)
+        df = pd.concat([df,df_])
+    return df
+
+
+def worker(q,oq):
+    while(not q.empty()):
+        stock = q.get()
+        ret = test_stock(stock)
+        oq.put((stock,ret))
+        print(stock)
+    print("exit worker")
+
+
+def ta_attr(x):
+    ret = {}
+    ret['total'] = [x['total']['total']] if 'total' in x else [0]
+    ret['won'] = [x['won']['total']]  if 'won' in x else [0]
+    ret['lost'] = [x['lost']['total']] if 'lost' in x else [0]
+    return ret
+
+def pyfolio_attr(x):
+    import helper.perfstat as perfstat
+    ret = perfstat.get_perf_stats(pd.Series(x['returns']))
+    ret = ret.transpose()
+    ret = ret.applymap(perfstat.stof)
+    return ret
+
+def multi_stock_test():
+    """
+    for e in t50[0]:
+        print(e)
+        db[str(e)] = test_stock(str(e),strategy=st)
+    """
+    t50= pd.read_csv("data/t50.csv",header=None)
+    db = {}
+    ps = []
+    m = mp.Manager()
+    q = m.JoinableQueue()
+    oq = m.JoinableQueue()
+    cpu = 10
+    for e in t50[0]: q.put(str(e))
+    for i in range(cpu):
+        ps.append(mp.Process(target=worker, args=(q, oq)))
+    for e in ps:e.start()
+    # print("all start")
+    for e in ps:e.join()
+    # print("all done")
+
+    while (not oq.empty()):
+        (stock_id, ret) = oq.get()
+        db[stock_id] = ret
+
+    db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+    # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
+    #print(db_ta)
+    x = db_attrs(db, 'PyFolio', pyfolio_attr)
+    #x = x.applymap(stof)
+    db_df = pd.concat([x, db_ta], axis=1)
+    print(db_df)
+
+
+
+method = ""
+if __name__ == "__main__":
+    st = RSIS
+    st = BBS
+
+    if method == "one":
+        db = {}
+        db["2317"] = test_stock("2317",result_show= True,plot = True,strategy=st)
+
+        db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
+        #print(db_ta)
+        x  = db_attrs(db, 'PyFolio', pyfolio_attr )
+        #print(x)
+        db_df =pd.concat([x,db_ta],axis = 1)
+        print(db_df)
+    else:
+        #multi_stock_test()
+        t50 = pd.read_csv("data/t50.csv", header=None)
+        db = {}
+        ps = []
+        m = mp.Manager()
+        q = m.JoinableQueue()
+        oq = m.JoinableQueue()
+        cpu = 10
+        for e in t50[0]: q.put(str(e))
+        for i in range(cpu):ps.append(mp.Process(target=worker, args=(q, oq)))
+        for e in ps:e.start()
+        for e in ps:e.join()
+
+        while (not oq.empty()):
+            (stock_id, ret) = oq.get()
+            db[stock_id] = ret
+
+        db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+        # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
+        # print(db_ta)
+        x = db_attrs(db, 'PyFolio', pyfolio_attr)
+        #x = x.applymap(stof)
+        db_df = pd.concat([x, db_ta], axis=1)
+        print(db_df)
+        print("win rate:",db_df[db_df['Cumulative returns']>0]['Cumulative returns'].count()/db_df['Cumulative returns'].count())
