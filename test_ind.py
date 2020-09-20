@@ -171,19 +171,23 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addstrategy(strategy)
     strategy.log_enable = enable_log
 
-    data0 = datah5.datafromh5( stock_id=stock_id,fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31))
-    cerebro.adddata(data0)
+    data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),ret_df = True)
+    #print(data0_df)
+    cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
     cerebro.addanalyzer(bt.analyzers.DrawDown)
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
+    global  tasktimestamp
+    #cerebro.addwriter(bt.WriterFile, csv=True,out=tasktime++"%s_writer.csv" %stock_id)
     strats = cerebro.run()
     result = {}
     for e in strats[0].analyzers:
         if result_show :print(type(e),e.get_analysis())
         result[type(e).__name__] = e.get_analysis()
+    result['growth'] = data0_df.iloc[-1]['close']/data0_df.iloc[0]['close']
     if plot:cerebro.plot()
 
     return result
@@ -228,6 +232,9 @@ def pyfolio_attr(x):
     ret = ret.applymap(perfstat.stof)
     return ret
 
+def timestamp():
+    return datetime.now().strftime("%Y%m%d-%H%M%S")
+
 def multi_stock_test():
     """
     for e in t50[0]:
@@ -259,11 +266,25 @@ def multi_stock_test():
     x = db_attrs(db, 'PyFolio', pyfolio_attr)
     #x = x.applymap(stof)
     db_df = pd.concat([x, db_ta], axis=1)
+    db_df['growth'] = db["2317"]["growth"]
+    print(db_df)
+
+def single_stock_test():
+    db = {}
+    db["2317"] = test_stock("2317", result_show=True, plot=True, strategy=st)
+
+    db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+    # print(db_ta)
+    x = db_attrs(db, 'PyFolio', pyfolio_attr)
+    # print(x)
+    db_df = pd.concat([x, db_ta], axis=1)
+    db_df['growth'] = pd.Series(db_attr(db,'growth',lambda  x: x))
+
     print(db_df)
 
 
-
-method = ""
+method = "one"
+tasktimestamp = timestamp()
 if __name__ == "__main__":
     st = RSIS
     st = BBS
@@ -277,7 +298,9 @@ if __name__ == "__main__":
         x  = db_attrs(db, 'PyFolio', pyfolio_attr )
         #print(x)
         db_df =pd.concat([x,db_ta],axis = 1)
+        db_df['growth'] = db["2317"]["growth"]
         print(db_df)
+
     else:
         #multi_stock_test()
         t50 = pd.read_csv("data/t50.csv", header=None)
@@ -302,5 +325,7 @@ if __name__ == "__main__":
         x = db_attrs(db, 'PyFolio', pyfolio_attr)
         #x = x.applymap(stof)
         db_df = pd.concat([x, db_ta], axis=1)
+        db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
         print("win rate:",db_df[db_df['Cumulative returns']>0]['Cumulative returns'].count()/db_df['Cumulative returns'].count())
+        #db_df.to_csv(tasktime+".csv")
