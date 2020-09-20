@@ -3,3 +3,5 @@ data/historical_data.h5
 src
 *.pyc
 backtrader
+__pycache__
+.ipynb_checkpoints
