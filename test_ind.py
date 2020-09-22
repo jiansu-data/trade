@@ -181,7 +181,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
     global  tasktimestamp
-    #cerebro.addwriter(bt.WriterFile, csv=True,out=tasktime++"%s_writer.csv" %stock_id)
+    cerebro.addwriter(bt.WriterFile, csv=True,out=tasktimestamp+"-%s_writer.csv" %stock_id)
     strats = cerebro.run()
     result = {}
     for e in strats[0].analyzers:
