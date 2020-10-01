@@ -5,6 +5,13 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import multiprocessing as mp
+import json
+import os
+import os.path
+
+output_dir = "output"
+if not os.path.isdir(output_dir):
+    os.mkdir(output_dir)
 
 class StrategyLogger(bt.SignalStrategy):
     log_enable = True
@@ -34,7 +41,7 @@ class StrategyLogger(bt.SignalStrategy):
             self.bar_executed = len(self)
 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
+            self.log('Order Canceled/Margin/Rejected'+":"+str(order.status))
 
         # Write down: no pending order
         self.order = None
@@ -159,19 +166,21 @@ class RSIS(bt.SignalStrategy):
 
         pass
 
-def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False):
+def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False,
+               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),tasktimestamp = None):
     from datetime import datetime
     import backtrader as bt
     import helper.datah5 as datah5
     import pandas as pd
     import numpy as np
     from datetime import datetime
+
     #print(stock_id)
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy)
     strategy.log_enable = enable_log
-
-    data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),ret_df = True)
+    datah5.cache_mode = True
+    data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate,todate=todate,ret_df = True)
     #print(data0_df)
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     cerebro.addsizer(bt.sizers.AllInSizer)
@@ -180,8 +189,13 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
-    global  tasktimestamp
-    cerebro.addwriter(bt.WriterFile, csv=True,out=tasktimestamp+"-%s_writer.csv" %stock_id)
+    #global  tasktimestamp
+    global output_dir
+    print("test", tasktimestamp)
+    if not os.path.isdir(output_dir+"/"+tasktimestamp):
+        os.mkdir(output_dir+"/"+tasktimestamp)
+    fn = output_dir+"/"+tasktimestamp+"/"+"%s_writer.csv" %stock_id
+    cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
     strats = cerebro.run()
     result = {}
     for e in strats[0].analyzers:
@@ -209,10 +223,10 @@ def db_attrs(db,attr,f):
     return df
 
 
-def worker(q,oq):
+def worker(q,oq,args):
     while(not q.empty()):
         stock = q.get()
-        ret = test_stock(stock)
+        ret = test_stock(stock,**args)
         oq.put((stock,ret))
         print(stock)
     print("exit worker")
@@ -268,6 +282,7 @@ def multi_stock_test():
     db_df = pd.concat([x, db_ta], axis=1)
     db_df['growth'] = db["2317"]["growth"]
     print(db_df)
+    db_df.to_csv( output_dir + "/" + tasktimestamp +"/"+"result.csv")
 
 def single_stock_test():
     db = {}
@@ -284,14 +299,14 @@ def single_stock_test():
 
 
 method = "one"
-tasktimestamp = timestamp()
+
 if __name__ == "__main__":
     st = RSIS
     st = BBS
 
     if method == "one":
         db = {}
-        db["2317"] = test_stock("2317",result_show= True,plot = True,strategy=st)
+        db["2317"] = test_stock("2317",result_show= True,plot = True,strategy=st,enable_log = True,tasktimestamp = timestamp())
 
         db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
         #print(db_ta)
@@ -303,15 +318,17 @@ if __name__ == "__main__":
 
     else:
         #multi_stock_test()
+        tasktimestamp = timestamp()
         t50 = pd.read_csv("data/t50.csv", header=None)
         db = {}
         ps = []
         m = mp.Manager()
         q = m.JoinableQueue()
         oq = m.JoinableQueue()
+        args = {"tasktimestamp":tasktimestamp}
         cpu = 10
         for e in t50[0]: q.put(str(e))
-        for i in range(cpu):ps.append(mp.Process(target=worker, args=(q, oq)))
+        for i in range(cpu):ps.append(mp.Process(target=worker, args=(q, oq,args)))
         for e in ps:e.start()
         for e in ps:e.join()
 
@@ -329,3 +346,5 @@ if __name__ == "__main__":
         print(db_df)
         print("win rate:",db_df[db_df['Cumulative returns']>0]['Cumulative returns'].count()/db_df['Cumulative returns'].count())
         #db_df.to_csv(tasktime+".csv")
+        #global tasktimestamp
+        db_df.to_csv( output_dir + "/" + tasktimestamp +"/"+"result.csv")
