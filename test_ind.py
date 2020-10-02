@@ -167,14 +167,13 @@ class RSIS(bt.SignalStrategy):
         pass
 
 def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False,
-               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),tasktimestamp = None):
+               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),taskname = None):
     from datetime import datetime
     import backtrader as bt
     import helper.datah5 as datah5
     import pandas as pd
     import numpy as np
     from datetime import datetime
-
     #print(stock_id)
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy)
@@ -189,12 +188,10 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
-    #global  tasktimestamp
     global output_dir
-    print("test", tasktimestamp)
-    if not os.path.isdir(output_dir+"/"+tasktimestamp):
-        os.mkdir(output_dir+"/"+tasktimestamp)
-    fn = output_dir+"/"+tasktimestamp+"/"+"%s_writer.csv" %stock_id
+    if not os.path.isdir(output_dir+"/"+taskname):
+        os.mkdir(output_dir+"/"+taskname)
+    fn = output_dir+"/"+taskname+"/"+"%s_writer.csv" %stock_id
     cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
     strats = cerebro.run()
     result = {}
@@ -255,7 +252,7 @@ def multi_stock_test():
         print(e)
         db[str(e)] = test_stock(str(e),strategy=st)
     """
-    t50= pd.read_csv("data/t50.csv",header=None)
+    t50= pd.read_csv("data/tw50.csv",header=None)
     db = {}
     ps = []
     m = mp.Manager()
@@ -296,37 +293,54 @@ def single_stock_test():
     db_df['growth'] = pd.Series(db_attr(db,'growth',lambda  x: x))
 
     print(db_df)
+#config_file = "config.json"
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--cpu", help="the process number , 0 for default")
+parser.add_argument("-f","--config", help="config file, default:config.json",default= "config.json",dest="config")
+parser.add_argument("-t","--taskname", help="taskname")
 
 
-method = "one"
 
+args = parser.parse_args()
+config_file = args.config
+method = ""
+
+configs = json.load(open(config_file))
+if args.cpu : configs['cpu'] = args.cpu
+if args.taskname: configs['taskname'] = args.taskname
+
+taskname = configs["taskname"] or timestamp()
 if __name__ == "__main__":
     st = RSIS
     st = BBS
 
     if method == "one":
         db = {}
-        db["2317"] = test_stock("2317",result_show= True,plot = True,strategy=st,enable_log = True,tasktimestamp = timestamp())
+        sid = configs["stock_id"]
+        enable_log = configs["enable_log"]
+
+        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname)
 
         db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
         #print(db_ta)
         x  = db_attrs(db, 'PyFolio', pyfolio_attr )
         #print(x)
         db_df =pd.concat([x,db_ta],axis = 1)
-        db_df['growth'] = db["2317"]["growth"]
+        db_df['growth'] = db[sid]["growth"]
         print(db_df)
 
     else:
         #multi_stock_test()
         tasktimestamp = timestamp()
-        t50 = pd.read_csv("data/t50.csv", header=None)
+        t50 = pd.read_csv("data/tw50.csv", header=None)
         db = {}
         ps = []
         m = mp.Manager()
         q = m.JoinableQueue()
         oq = m.JoinableQueue()
-        args = {"tasktimestamp":tasktimestamp}
-        cpu = 10
+        args = {"taskname":tasktimestamp}
+        cpu = configs["cpu"] or int(os.cpu_count() *3//4)
         for e in t50[0]: q.put(str(e))
         for i in range(cpu):ps.append(mp.Process(target=worker, args=(q, oq,args)))
         for e in ps:e.start()
