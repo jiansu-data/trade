@@ -191,8 +191,9 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     global output_dir
     if not os.path.isdir(output_dir+"/"+taskname):
         os.mkdir(output_dir+"/"+taskname)
-    fn = output_dir+"/"+taskname+"/"+"%s_writer.csv" %stock_id
-    cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
+    if configs["save_result"]:
+        fn = output_dir+"/"+taskname+"/"+"%s_writer.csv" %stock_id
+        cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
     strats = cerebro.run()
     result = {}
     for e in strats[0].analyzers:
@@ -279,7 +280,7 @@ def multi_stock_test():
     db_df = pd.concat([x, db_ta], axis=1)
     db_df['growth'] = db["2317"]["growth"]
     print(db_df)
-    db_df.to_csv( output_dir + "/" + tasktimestamp +"/"+"result.csv")
+    db_df.to_csv( output_dir + "/" + taskname +"/"+"result.csv")
 
 def single_stock_test():
     db = {}
@@ -304,16 +305,25 @@ parser.add_argument("-t","--taskname", help="taskname")
 
 args = parser.parse_args()
 config_file = args.config
-method = ""
+#method = ""
 
 configs = json.load(open(config_file))
 if args.cpu : configs['cpu'] = args.cpu
 if args.taskname: configs['taskname'] = args.taskname
+method = configs['mode']
+if configs['strategy']  == "bb and":configs['strategy']  = BBS
+if configs['strategy']  == "kd":configs['strategy']  = KDS
+if configs['strategy']  == "macd":configs['strategy']  = MACDS
+if configs['strategy']  == "rsi":configs['strategy']  = RSIS
+if not configs['strategy']  :configs['strategy']  = BBS
 
 taskname = configs["taskname"] or timestamp()
+
+def datetime_from_string(string):
+    return datetime(*list(map(lambda x: int(x), string.split("-"))))
+
 if __name__ == "__main__":
-    st = RSIS
-    st = BBS
+    st = configs['strategy']
 
     if method == "one":
         db = {}
@@ -332,14 +342,14 @@ if __name__ == "__main__":
 
     else:
         #multi_stock_test()
-        tasktimestamp = timestamp()
+        taskname = configs["taskname"] or timestamp()
         t50 = pd.read_csv("data/tw50.csv", header=None)
         db = {}
         ps = []
         m = mp.Manager()
         q = m.JoinableQueue()
         oq = m.JoinableQueue()
-        args = {"taskname":tasktimestamp}
+        args = {"taskname":taskname, "fromdate":datetime_from_string(configs['fromdate']),"todate":datetime_from_string(configs['todate'])}
         cpu = configs["cpu"] or int(os.cpu_count() *3//4)
         for e in t50[0]: q.put(str(e))
         for i in range(cpu):ps.append(mp.Process(target=worker, args=(q, oq,args)))
@@ -361,4 +371,4 @@ if __name__ == "__main__":
         print("win rate:",db_df[db_df['Cumulative returns']>0]['Cumulative returns'].count()/db_df['Cumulative returns'].count())
         #db_df.to_csv(tasktime+".csv")
         #global tasktimestamp
-        db_df.to_csv( output_dir + "/" + tasktimestamp +"/"+"result.csv")
+        db_df.to_csv( output_dir + "/" + taskname +"/"+"result.csv")
