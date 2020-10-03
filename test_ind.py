@@ -10,6 +10,7 @@ import os
 import os.path
 
 from strategy import *
+import EvalAnalyzer
 
 output_dir = "output"
 if not os.path.isdir(output_dir):
@@ -24,6 +25,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import pandas as pd
     import numpy as np
     from datetime import datetime
+    import EvalAnalyzer
     #print(stock_id)
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy)
@@ -35,15 +37,18 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     #cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
     cerebro.addanalyzer(bt.analyzers.DrawDown)
-    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer)
+    cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
     global output_dir
     if not os.path.isdir(output_dir+"/"+taskname):
         os.mkdir(output_dir+"/"+taskname)
+    log_fp = None
     if configs["save_result"]:
         fn = output_dir+"/"+taskname+"/"+"%s_writer.csv" %stock_id
         cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
+        #log_fp = open(output_dir+"/"+taskname+"/"+stock_id+".log","a")
+        strategy.log_file = log_fp
     strats = cerebro.run()
     result = {}
     for e in strats[0].analyzers:
@@ -51,6 +56,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
         result[type(e).__name__] = e.get_analysis()
     result['growth'] = data0_df.iloc[-1]['close']/data0_df.iloc[0]['close']
     if plot:cerebro.plot()
+    if log_fp: log_fp.close()
 
     return result
 
@@ -88,6 +94,14 @@ def ta_attr(x):
     ret['score'] = [float(ret['won'][0])/float(ret['total'][0])]
     return ret
 
+def tap_attr(x):
+    ret = {}
+    ret['total'] = [x['total']['total']] if 'total' in x else [0]
+    ret['won'] = [x['won']['total']]  if 'won' in x else [0]
+    ret['lost'] = [x['lost']['total']] if 'lost' in x else [0]
+    ret['score'] = [float(ret['won'][0])/float(ret['total'][0])]
+    ret['profit'] = [x['eval_static']['profit']] if 'eval_static' in x else [0]
+    return ret
 def pyfolio_attr(x):
     import helper.perfstat as perfstat
     ret = perfstat.get_perf_stats(pd.Series(x['returns']))
@@ -123,7 +137,8 @@ def multi_stock_test():
         (stock_id, ret) = oq.get()
         db[stock_id] = ret
 
-    db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+    #db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+    db_ta = db_attrs(db, 'TradeAnalyzerPercentage', ta_attr)
     # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
     #print(db_ta)
     x = db_attrs(db, 'PyFolio', pyfolio_attr)
@@ -135,7 +150,8 @@ def multi_stock_test():
 
 def single_stock_test():
     db = {}
-    db["2317"] = test_stock("2317", result_show=True, plot=True, strategy=st)
+    sid = "2317"
+    db[sid] = test_stock(sid, result_show=True, plot=True, strategy=st)
 
     db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
     # print(db_ta)
@@ -183,7 +199,8 @@ if __name__ == "__main__":
 
         db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname)
 
-        db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
+        #db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
+        db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
         #print(db_ta)
         x  = db_attrs(db, 'PyFolio', pyfolio_attr )
         #print(x)
@@ -211,15 +228,17 @@ if __name__ == "__main__":
             (stock_id, ret) = oq.get()
             db[stock_id] = ret
 
-        db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+        #db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+        db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
         # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
         # print(db_ta)
         x = db_attrs(db, 'PyFolio', pyfolio_attr)
         #x = x.applymap(stof)
-        db_df = pd.concat([x, db_ta], axis=1)
+        #db_df = pd.concat([x, db_ta], axis=1)
+        db_df = db_ta
         db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
-        print("win rate:",db_df[db_df['Cumulative returns']>0]['Cumulative returns'].count()/db_df['Cumulative returns'].count())
+        print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
         #db_df.to_csv(tasktime+".csv")
         #global tasktimestamp
         db_df.to_csv( output_dir + "/" + taskname +"/"+"result.csv")

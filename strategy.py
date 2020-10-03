@@ -47,7 +47,7 @@ class StrategyLogger(bt.SignalStrategy):
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
-
+        #print(trade)
         self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
                  (trade.pnl, trade.pnlcomm))
 
