@@ -19,7 +19,7 @@ class TradeAnalyzerPercentage(Analyzer):
         #self.rets.trades = []
         self.rets.eval_static.profit = 0
         self.rets.eval_static.profit_comm = 0
-        #self.rets.trade_cals = []
+        self.rets.trade_cals = []
 
     def stop(self):
         super(TradeAnalyzerPercentage, self).stop()
@@ -37,15 +37,18 @@ class TradeAnalyzerPercentage(Analyzer):
         elif trade.status == trade.Closed:
             #self.rets.trades.append(copy.copy(trade))
             trades = self.rets
-            trade_cal  = AutoDict()
-            trade_cal.profit = trade.pnl/trade.price
-            trade_cal.profit_comm = trade.pnlcomm/trade.price
-            trade_cal.barlen = trade.barlen
-            trade_cal.price = trade.price
-            #self.rets.trade_cals.append(trade_cal)
+            trade_cal = {}
+            """
+            """
+            #trade_cal  = AutoDict()
+            trade_cal['profit'] = trade.pnl/trade.price
+            trade_cal['profit_comm'] = trade.pnlcomm/trade.price
+            trade_cal['barlen'] = trade.barlen
+            trade_cal['price'] = trade.price
+            self.rets.trade_cals.append(trade_cal)
 
-            self.rets.eval_static.profit  += trade_cal.profit
-            self.rets.eval_static.profit_comm += trade_cal.profit_comm
+            self.rets.eval_static.profit  += trade_cal['profit']
+            self.rets.eval_static.profit_comm += trade_cal['profit_comm']
 
 
             res = AutoDict()

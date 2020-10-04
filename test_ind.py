@@ -26,7 +26,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import numpy as np
     from datetime import datetime
     import EvalAnalyzer
-    #print(stock_id)
+    #print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
     cerebro.addstrategy(strategy)
     strategy.log_enable = enable_log
@@ -78,6 +78,14 @@ def db_attrs(db,attr,f):
 
 
 def worker(q,oq,args):
+    from datetime import datetime
+    import backtrader as bt
+    import helper.datah5 as datah5
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+    import EvalAnalyzer
+    from backtrader.utils import AutoOrderedDict, AutoDict
     while(not q.empty()):
         stock = q.get()
         ret = test_stock(stock,**args)
@@ -85,8 +93,18 @@ def worker(q,oq,args):
         print(stock)
     print("exit worker")
 
+def worker2(q,oq,args):
+    while(not q.empty()):
+        stock = q.get()
 
+        stock.update(args)
+        #print("33",stock)
+        ret = test_stock(**stock)
+        oq.put((stock['stock_id']+"_"+str(stock['fromdate'].date()),ret))
+        print(stock)
+    print("exit worker")
 def ta_attr(x):
+
     ret = {}
     ret['total'] = [x['total']['total']] if 'total' in x else [0]
     ret['won'] = [x['won']['total']]  if 'won' in x else [0]
@@ -207,7 +225,46 @@ if __name__ == "__main__":
         db_df =pd.concat([x,db_ta],axis = 1)
         db_df['growth'] = db[sid]["growth"]
         print(db_df)
+    elif method == "type":
+        #multi_stock_test()
+        print("type mothed")
+        taskname = configs["taskname"] or timestamp()
+        type50 = pd.read_csv("data/testset.csv", header=None)
+        db = {}
+        ps = []
+        m = mp.Manager()
+        q = m.JoinableQueue()
+        oq = m.JoinableQueue()
+        args = {"taskname":taskname}
+        cpu = configs["cpu"] or int(os.cpu_count() *3//4)
+        for i in range(len(type50[0])):
+            each = type50.iloc[i]
+            e = {'stock_id' : str(each[0]) , 'fromdate':datetime_from_string(each[3]),
+                 'todate':datetime_from_string(each[4])}
 
+            q.put(e)
+        for i in range(cpu):ps.append(mp.Process(target=worker2, args=(q, oq,args)))
+        for e in ps:e.start()
+        for e in ps:e.join()
+
+        while (not oq.empty()):
+            (stock_id, ret) = oq.get()
+            db[stock_id] = ret
+
+        #db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
+        db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
+        # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
+        # print(db_ta)
+        x = db_attrs(db, 'PyFolio', pyfolio_attr)
+        #x = x.applymap(stof)
+        #db_df = pd.concat([x, db_ta], axis=1)
+        db_df = db_ta
+        db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
+        print(db_df)
+        print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
+        #db_df.to_csv(tasktime+".csv")
+        #global tasktimestamp
+        db_df.to_csv( output_dir + "/" + taskname +"/"+"result.csv")
     else:
         #multi_stock_test()
         taskname = configs["taskname"] or timestamp()
