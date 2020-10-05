@@ -175,3 +175,38 @@ class TradeAnalyzerPercentage(Analyzer):
                     trls_wl.max = max(m, barlen2)
                     m = trls_wl.min or MAXINT
                     trls_wl.min = min(m, barlen2 or m)
+
+
+class MDDPercentage(Analyzer):
+
+    def create_analysis(self):
+        self.rets = AutoOrderedDict()
+        self._maxvalue = 0
+        self.mdd = 0
+
+    def stop(self):
+        super(MDDPercentage, self).stop()
+        self.rets._close()
+        #print("max drawdown ", self.mdd)
+
+    def notify_trade(self, trade):
+        if trade.justopened:
+            self._maxvalue = trade.price
+
+        elif trade.status == trade.Closed:
+            self._maxvalue = 0
+            pass
+
+    def next(self):
+        r = self.rets
+        if self.strategy.position:
+            #print(self._maxvalue,self.data[0],self.mdd)
+            cur_price = self.data[0]
+            if cur_price > self._maxvalue:
+                self._maxvalue = cur_price
+            else:
+                drawdown = (cur_price - self._maxvalue )/self._maxvalue
+                print(self._maxvalue, self.data[0], self.mdd,drawdown)
+                if drawdown <self.mdd :
+                    self.mdd = drawdown
+                    r.mdd = self.mdd

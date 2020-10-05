@@ -40,6 +40,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.PyFolio)
+    cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir
     if not os.path.isdir(output_dir+"/"+taskname):
         os.mkdir(output_dir+"/"+taskname)
