@@ -20,7 +20,8 @@ class TradeAnalyzerPercentage(Analyzer):
         self.rets.eval_static.profit = 0
         self.rets.eval_static.profit_comm = 0
         self.rets.trade_cals = []
-
+        self._maxvalue = 0
+        self.mdd = 0
     def stop(self):
         super(TradeAnalyzerPercentage, self).stop()
         self.rets._close()
@@ -29,6 +30,12 @@ class TradeAnalyzerPercentage(Analyzer):
         #    print(i, e, "\n")
 
     def notify_trade(self, trade):
+        if trade.justopened:
+            self._maxvalue = trade.price
+
+        elif trade.status == trade.Closed:
+            self._maxvalue = 0
+
         if trade.justopened:
             # Trade just opened
             self.rets.total.total += 1
@@ -175,7 +182,20 @@ class TradeAnalyzerPercentage(Analyzer):
                     trls_wl.max = max(m, barlen2)
                     m = trls_wl.min or MAXINT
                     trls_wl.min = min(m, barlen2 or m)
-
+    def next(self):
+        r = self.rets
+        if self.strategy.position:
+            #print(self._maxvalue,self.data[0],self.mdd)
+            cur_price = self.data[0]
+            if cur_price > self._maxvalue:
+                self._maxvalue = cur_price
+            else:
+                drawdown = (cur_price - self._maxvalue )/self._maxvalue
+                print(self._maxvalue, self.data[0], self.mdd,drawdown)
+                if drawdown <self.mdd :
+                    self.mdd = drawdown
+                    r.mdd = self.mdd
+"""
 
 class MDDPercentage(Analyzer):
 
@@ -210,3 +230,4 @@ class MDDPercentage(Analyzer):
                 if drawdown <self.mdd :
                     self.mdd = drawdown
                     r.mdd = self.mdd
+"""

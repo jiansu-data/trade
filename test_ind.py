@@ -36,11 +36,11 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     #cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
-    cerebro.addanalyzer(bt.analyzers.DrawDown)
+    #cerebro.addanalyzer(bt.analyzers.DrawDown)
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
-    cerebro.addanalyzer(bt.analyzers.PyFolio)
-    cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
+    #cerebro.addanalyzer(bt.analyzers.PyFolio)
+    #cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir
     if not os.path.isdir(output_dir+"/"+taskname):
         os.mkdir(output_dir+"/"+taskname)
@@ -120,6 +120,7 @@ def tap_attr(x):
     ret['lost'] = [x['lost']['total']] if 'lost' in x else [0]
     ret['score'] = [float(ret['won'][0])/float(ret['total'][0])]
     ret['profit'] = [x['eval_static']['profit']] if 'eval_static' in x else [0]
+    ret['mdd'] = [x['mdd']] if 'mdd' in x else [0]
     return ret
 def pyfolio_attr(x):
     import helper.perfstat as perfstat
@@ -219,11 +220,13 @@ if __name__ == "__main__":
         db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname)
 
         #db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
-        db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
+        db_ta= db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
         #print(db_ta)
-        x  = db_attrs(db, 'PyFolio', pyfolio_attr )
+        db_df = db_ta
+        if 'PyFolio' in db:
+            x  = db_attrs(db, 'PyFolio', pyfolio_attr )
         #print(x)
-        db_df =pd.concat([x,db_ta],axis = 1)
+            db_df =pd.concat([x,db_df],axis = 1)
         db_df['growth'] = db[sid]["growth"]
         print(db_df)
     elif method == "type":
@@ -255,11 +258,13 @@ if __name__ == "__main__":
         #db_ta = db_attrs(db, 'TradeAnalyzer', ta_attr)
         db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
         # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
-        # print(db_ta)
-        x = db_attrs(db, 'PyFolio', pyfolio_attr)
-        #x = x.applymap(stof)
-        #db_df = pd.concat([x, db_ta], axis=1)
         db_df = db_ta
+        # print(db_ta)
+        if 'PyFolio' in db:
+            x = db_attrs(db, 'PyFolio', pyfolio_attr)
+            #x = x.applymap(stof)
+            db_df = pd.concat([x, db_ta], axis=1)
+            #db_df = db_ta
         db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
         print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
@@ -290,10 +295,11 @@ if __name__ == "__main__":
         db_ta = db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)
         # print("win rate:", (ar_sr>0).sum()/ar_sr.count())
         # print(db_ta)
-        x = db_attrs(db, 'PyFolio', pyfolio_attr)
-        #x = x.applymap(stof)
-        #db_df = pd.concat([x, db_ta], axis=1)
         db_df = db_ta
+        if 'PyFolio' in db:
+            x = db_attrs(db, 'PyFolio', pyfolio_attr)
+            #x = x.applymap(stof)
+            db_df = pd.concat([x, db_df], axis=1)
         db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
         print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
