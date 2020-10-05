@@ -99,7 +99,6 @@ def worker2(q,oq,args):
         stock = q.get()
 
         stock.update(args)
-        #print("33",stock)
         ret = test_stock(**stock)
         oq.put((stock['stock_id']+"_"+str(stock['fromdate'].date()),ret))
         print(stock)
@@ -230,8 +229,6 @@ if __name__ == "__main__":
         db_df['growth'] = db[sid]["growth"]
         print(db_df)
     elif method == "type":
-        #multi_stock_test()
-        print("type mothed")
         taskname = configs["taskname"] or timestamp()
         type50 = pd.read_csv("data/testset.csv", header=None)
         db = {}

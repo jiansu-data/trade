@@ -191,7 +191,7 @@ class TradeAnalyzerPercentage(Analyzer):
                 self._maxvalue = cur_price
             else:
                 drawdown = (cur_price - self._maxvalue )/self._maxvalue
-                print(self._maxvalue, self.data[0], self.mdd,drawdown)
+                #print(self._maxvalue, self.data[0], self.mdd,drawdown)
                 if drawdown <self.mdd :
                     self.mdd = drawdown
                     r.mdd = self.mdd
