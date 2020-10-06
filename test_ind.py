@@ -28,11 +28,12 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import EvalAnalyzer
     #print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
-    cerebro.addstrategy(strategy)
+
     strategy.log_enable = enable_log
     datah5.cache_mode = True
     data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate,todate=todate,ret_df = True)
     #print(data0_df)
+    cerebro.addstrategy(strategy,enddate=data0_df.index[-2])
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     #cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)

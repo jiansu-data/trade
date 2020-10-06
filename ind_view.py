@@ -29,12 +29,4 @@ if __name__ == "__main__":
         db = {}
         sid = "1101"
         st = Viewer
-        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,tasktimestamp = timestamp())
-
-        db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
-        #print(db_ta)
-        x  = db_attrs(db, 'PyFolio', pyfolio_attr )
-        #print(x)
-        db_df =pd.concat([x,db_ta],axis = 1)
-        db_df['growth'] = db[sid]["growth"]
-        print(db_df)
+        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = timestamp())
