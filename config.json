@@ -1,1 +1,1 @@
-{"mode": "type", "stock_id": "1102", "fromdate": "2019-1-1", "todate": "2019-12-31", "taskname": null, "enable_log": true, "save_result": true, "plot": true, "cpu": 0, "strategy": null}
+{"mode": "one", "stock_id": "data/testset.csv", "fromdate": "2019-1-1", "todate": "2019-12-31", "taskname": "test", "enable_log": true, "save_result": true, "plot": true, "cpu": 0, "strategy": null}

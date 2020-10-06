@@ -10,10 +10,11 @@ import os
 import os.path
 
 from test_ind import  *
+from strategy import *
 ### get buy information data.
 
 class Viewer(bt.SignalStrategy):
-    def __init__(self):
+    def __init__(self,enddate=None):
         self.macd= bt.ind.MACDHisto()
         self.kds = bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
         self.rsi = bt.ind.RelativeStrengthIndex()
@@ -24,9 +25,17 @@ class Viewer(bt.SignalStrategy):
 
     def next(self):
 
+
         pass
 if __name__ == "__main__":
         db = {}
-        sid = "1101"
-        st = Viewer
-        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = timestamp())
+        result_df = pd.read_csv("output/test/result.csv")
+        #print(result_df)
+        while True:
+            print(result_df[result_df['profit'] < 0][['id', 'profit']])
+            sid = input("test :").strip()
+            if not sid:
+                break
+            #sid = "2301"#"9910"
+            #st = Viewer
+            db[sid] = test_stock(sid,result_show= True,plot = True,strategy=MACDS,enable_log = True,taskname = timestamp())

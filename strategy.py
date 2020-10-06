@@ -104,7 +104,7 @@ class BBS(StrategyLogger):
         #    self.close()
         pass
 
-class MACDS(bt.SignalStrategy):
+class MACDS(StrategyLogger):
     def __init__(self, enddate=None):
         self.macd= bt.ind.MACDHisto()
 
@@ -121,23 +121,24 @@ class MACDS(bt.SignalStrategy):
                 self.close()
                 return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
-        if  self.position:
+        if  not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
-            if self.crossup:
+            if self.crossup[0]:
                 self.buy()
         else:
 
-            if self.crossdown:
+            if self.crossdown[0]:
                 self.close()
 
         pass
 
-class KDS(bt.SignalStrategy):
+class KDS(StrategyLogger):
     def __init__(self, enddate=None):
         self.kds = bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
 
         self.crossup = bt.ind.CrossUp(self.kds.lines.percK, self.kds.lines.percD)
         self.crossdown = bt.ind.CrossDown(self.kds.lines.percK, self.kds.lines.percD)
+        self.enddate =  enddate
     def next(self):
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if  self.position:
@@ -158,13 +159,14 @@ class KDS(bt.SignalStrategy):
                 self.close()
         pass
 
-class RSIS(bt.SignalStrategy):
+class RSIS(StrategyLogger):
     def __init__(self, enddate=None):
         self.rsi = bt.ind.RelativeStrengthIndex()
 
         #self.signal_add(bt.SIGNAL_LONG, self.cross_up_mid)
         #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
         self.hold = False
+        self.enddate =  enddate
     def next(self):
         if  self.position:
             if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
