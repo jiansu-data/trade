@@ -26,6 +26,8 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import numpy as np
     from datetime import datetime
     import EvalAnalyzer
+    import pickle
+    session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
     #print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
     #print(strategy)
@@ -40,6 +42,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     #cerebro.addanalyzer(bt.analyzers.DrawDown)
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
+    cerebro.addanalyzer(bt.analyzers.Transactions)
     #cerebro.addanalyzer(bt.analyzers.PyFolio)
     #cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir
@@ -57,9 +60,12 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
         if result_show :print(type(e),e.get_analysis())
         result[type(e).__name__] = e.get_analysis()
     result['growth'] = data0_df.iloc[-1]['close']/data0_df.iloc[0]['close']
+    session_dict['transactions'] = result['Transactions']
     if plot:cerebro.plot()
     if log_fp: log_fp.close()
-
+    fn = output_dir+"/"+taskname+"/"+"%s_%s_%s.pickle" %(stock_id,str(fromdate.date()),str(todate.date()))
+    print(fn)
+    pickle.dump(session_dict,open(fn,"wb"))
     return result
 
 def db_attr(db,attr,f):
@@ -206,7 +212,7 @@ if configs['strategy']  == "macd":configs['strategy']  = MACDS
 if configs['strategy']  == "rsi":configs['strategy']  = RSIS
 if configs['strategy']  == "dmi":configs['strategy']  = DMIS
 if configs['strategy']  == "cci":configs['strategy']  = CCIS
-if not configs['strategy']  :configs['strategy']  = CCIS
+if not configs['strategy']  :configs['strategy']  = BBS
 
 taskname = configs["taskname"] or timestamp()
 

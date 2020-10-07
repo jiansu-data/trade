@@ -11,9 +11,11 @@ import os.path
 
 from test_ind import  *
 from strategy import *
+import pickle
 ### get buy information data.
 
 class Viewer(bt.SignalStrategy):
+    session = None
     def __init__(self,enddate=None):
         self.macd= bt.ind.MACDHisto()
         self.kds = bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
@@ -24,9 +26,17 @@ class Viewer(bt.SignalStrategy):
         self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
         self.obv = OnBalanceVolume()
-
     def next(self):
-
+        if self.session:
+            trans = self.session['transactions']
+            cur_datetime = self.datas[0].datetime.datetime(0)
+            if cur_datetime in trans:
+                [(sale,price,sid,sym,cost)]=trans[cur_datetime]
+                del trans[cur_datetime]
+                if cost >0:
+                    self.buy()
+                else :
+                    self.sell()
 
         pass
 if __name__ == "__main__":
@@ -42,6 +52,7 @@ if __name__ == "__main__":
                     break
                 #sid = "2301"#"9910"
                 #st = Viewer
+                #Viewer.session = pickle.load(open("output/test/2330_2019-01-01_2019-12-31.pickle","rb"))
                 db[sid] = test_stock(sid,result_show= True,plot = True,strategy=Viewer,enable_log = True,taskname = timestamp())
             except:
                 print("exit")
