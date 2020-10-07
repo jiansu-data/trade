@@ -22,6 +22,8 @@ class Viewer(bt.SignalStrategy):
         self.mtm = bt.ind.Momentum()
         self.cci = bt.ind.CommodityChannelIndex()
         self.atr = bt.ind.ATR()
+        self.dmi = bt.ind.DirectionalMovement()
+        self.obv = OnBalanceVolume()
 
     def next(self):
 
@@ -33,9 +35,15 @@ if __name__ == "__main__":
         #print(result_df)
         while True:
             print(result_df[result_df['profit'] < 0][['id', 'profit']])
-            sid = input("test :").strip()
-            if not sid:
-                break
-            #sid = "2301"#"9910"
-            #st = Viewer
-            db[sid] = test_stock(sid,result_show= True,plot = True,strategy=MACDS,enable_log = True,taskname = timestamp())
+            idx = input("test :").strip()
+            try:
+                sid = result_df.iloc[int(idx)]['id'].split("_")[0]
+                if not sid:
+                    break
+                #sid = "2301"#"9910"
+                #st = Viewer
+                db[sid] = test_stock(sid,result_show= True,plot = True,strategy=Viewer,enable_log = True,taskname = timestamp())
+            except:
+                print("exit")
+                exit(9)
+                pass

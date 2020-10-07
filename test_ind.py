@@ -28,7 +28,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import EvalAnalyzer
     #print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
-
+    #print(strategy)
     strategy.log_enable = enable_log
     datah5.cache_mode = True
     data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate,todate=todate,ret_df = True)
@@ -74,7 +74,9 @@ def db_attrs(db,attr,f):
     for e in db:
         #print(e,db[e][attr])
         df_ = pd.DataFrame(f(db[e][attr]))
+        #df_['id']  = str(e)
         df_.rename(index={0:str(e),'Backtest':str(e)},inplace=True)
+        df_.index.name = "id"
         df = pd.concat([df,df_])
     return df
 
@@ -118,7 +120,7 @@ def tap_attr(x):
     ret['total'] = [x['total']['total']] if 'total' in x else [0]
     ret['won'] = [x['won']['total']]  if 'won' in x else [0]
     ret['lost'] = [x['lost']['total']] if 'lost' in x else [0]
-    ret['score'] = [float(ret['won'][0])/float(ret['total'][0])]
+    ret['score'] = [float(ret['won'][0])/float(ret['total'][0])] if float(ret['total'][0]) else 0
     ret['profit'] = [x['eval_static']['profit']] if 'eval_static' in x else [0]
     ret['mdd'] = [x['mdd']] if 'mdd' in x else [0]
     return ret
@@ -198,11 +200,13 @@ configs = json.load(open(config_file))
 if args.cpu : configs['cpu'] = args.cpu
 if args.taskname: configs['taskname'] = args.taskname
 method = configs['mode']
-if configs['strategy']  == "bb and":configs['strategy']  = BBS
+if configs['strategy']  == "bband":configs['strategy']  = BBS
 if configs['strategy']  == "kd":configs['strategy']  = KDS
 if configs['strategy']  == "macd":configs['strategy']  = MACDS
 if configs['strategy']  == "rsi":configs['strategy']  = RSIS
-if not configs['strategy']  :configs['strategy']  = BBS
+if configs['strategy']  == "dmi":configs['strategy']  = DMIS
+if configs['strategy']  == "cci":configs['strategy']  = CCIS
+if not configs['strategy']  :configs['strategy']  = CCIS
 
 taskname = configs["taskname"] or timestamp()
 
@@ -211,6 +215,8 @@ def datetime_from_string(string):
 
 if __name__ == "__main__":
     st = configs['strategy']
+    if ".csv" in configs["stock_id"]:
+        method = "type"
 
     if method == "one":
         db = {}
@@ -231,7 +237,7 @@ if __name__ == "__main__":
         print(db_df)
     elif method == "type":
         taskname = configs["taskname"] or timestamp()
-        type50 = pd.read_csv("data/testset.csv", header=None)
+        type50 = pd.read_csv(configs["stock_id"], header=None)
         db = {}
         ps = []
         m = mp.Manager()
@@ -242,7 +248,7 @@ if __name__ == "__main__":
         for i in range(len(type50[0])):
             each = type50.iloc[i]
             e = {'stock_id' : str(each[0]) , 'fromdate':datetime_from_string(each[3]),
-                 'todate':datetime_from_string(each[4])}
+                 'todate':datetime_from_string(each[4]), 'strategy':configs['strategy']}
 
             q.put(e)
         for i in range(cpu):ps.append(mp.Process(target=worker2, args=(q, oq,args)))
