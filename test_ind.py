@@ -28,7 +28,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import EvalAnalyzer
     import pickle
     session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
-    #print(stock_id,fromdate,todate)
+    print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
     #print(strategy)
     strategy.log_enable = enable_log
@@ -109,7 +109,7 @@ def worker2(q,oq,args):
 
         stock.update(args)
         ret = test_stock(**stock)
-        oq.put((stock['stock_id']+"_"+str(stock['fromdate'].date()),ret))
+        oq.put((stock['stock_id']+"_"+str(stock['fromdate'].date())+"_"+str(stock['todate'].date()),ret))
         print(stock)
     print("exit worker")
 def ta_attr(x):
