@@ -8,14 +8,20 @@ import multiprocessing as mp
 import json
 import os
 import os.path
-
+import collections
+def datetime_from_string(string):
+    return datetime(*list(map(lambda x: int(x), string.split("-"))))
 class StrategyLogger(bt.SignalStrategy):
     log_enable = True
     log_file = None
     params = (
         ('enddate', None),
-        ('startdate',None)
+        ('startdate',None),
+        ('order_requests',collections.OrderedDict())
     )
+    def order_requests(self, order_datetime, order_type,order_num, order_price):
+        #if self.params.order_requests: self.params.order_requests = collections.OrderedDict()
+        self.params.order_requests[str(self.datas[0].datetime.date(0))] = [order_type, order_num,order_price]
     def __init__(self,log_enable = True):
         self.enddate = self.params.enddate
         self.startdate = self.params.startdate
@@ -32,6 +38,9 @@ class StrategyLogger(bt.SignalStrategy):
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
             # Buy/Sell order submitted/accepted to/by broker - Nothing to do
+            #self.log('Order Submitted/Accepted'+":"+order.Status[order.status])
+            if order.status == order.Accepted:
+                self.order_requests(order.created.dt,order.ordtype, order.created.size,order.created.price)
             return
 
         # Check if an order has been completed
@@ -51,7 +60,7 @@ class StrategyLogger(bt.SignalStrategy):
         self.order = None
 
     def starttrade(self):
-        print(self.params.startdate, )
+        #print(self.params.startdate, )
         if self.params.startdate and self.datas[0].datetime.date(0) >self.params.startdate.date():
             return True
         else:
@@ -103,7 +112,7 @@ class BBS(StrategyLogger):
             if self.cross_up_mid[0]:
                 self.log('BUY CREATE, %.2f' % self.data.close[0])
                 self.buy()
-            if self.cross_up_bot[0] and self.bb.mid[0] > self.bb.mid[-2]:
+            if self.cross_up_bot[0] and (self.bb.mid[0] > self.bb.mid[-2])/self.bb.mid[-2] > 0.01:
                 self.log('BUY CREATE, %.2f' % self.data.close[0])
                 self.buy()
             #crossover = bt.ind.CrossUp(self.data.close, self.bb.mid)
@@ -114,7 +123,7 @@ class BBS(StrategyLogger):
         else:
             #if self.crossdown_top:
             #    self.close()
-            if self.crossdown_mid:
+            if self.crossdown_mid or self.crossdown_top:
                 self.log('CLOSE CREATE, %.2f' % self.data.close[0])
                 self.close()
 

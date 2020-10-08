@@ -4,6 +4,7 @@ import helper.datah5 as datah5
 import pandas as pd
 import numpy as np
 from datetime import datetime
+from datetime import timedelta
 import multiprocessing as mp
 import json
 import os
@@ -17,30 +18,32 @@ import pickle
 class Viewer(StrategyLogger):
     session = None
     def __init__(self,enddate=None):
-        #self.macd= bt.ind.MACDHisto()
+        self.macd= bt.ind.MACDHisto()
         self.bband = bt.ind.BollingerBands()
         self.kds = bt.ind.StochasticFull()#bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
         self.rsi = bt.ind.RelativeStrengthIndex()
         #self.roc = bt.ind.RateOfChange100()
-        #self.mtm = bt.ind.Momentum()
-        #self.cci = bt.ind.CommodityChannelIndex()
-        #self.atr = bt.ind.ATR()
+        self.mtm = bt.ind.Momentum()
+        self.cci = bt.ind.CommodityChannelIndex()
+        self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
         self.obv = OnBalanceVolume()
         self.ma = bt.ind.MovingAverage()
     def next(self):
 
         if self.session:
-            trans = self.session['transactions']
+            orders = self.session['orders']
             cur_datetime = self.datas[0].datetime.datetime(0)
-            if cur_datetime in trans:
+            cur_datetime_str = str(cur_datetime.date())
+            #print(cur_datetime)
+            if cur_datetime_str in orders:
                 # amount	 price	 sid	 symbol	 value
-                [(amount,price,sid,symbol,value)]=trans[cur_datetime]
-                del trans[cur_datetime]
-                if value <0:
+                (type_,amount,price)=orders[cur_datetime_str]
+                del orders[cur_datetime_str]
+                if type_ == 0:
                     print("buy",cur_datetime)
                     self.buy()
-                else :
+                elif type_ == 1 :
                     print("sell",cur_datetime)
                     self.sell()
             else:
@@ -53,7 +56,9 @@ if __name__ == "__main__":
         result_df = pd.read_csv("output/test/result.csv")
         #print(result_df)
         while True:
-            print(result_df[result_df['profit'] < 0][['id', 'profit']])
+            print(result_df[result_df['profit'] < 0][['id', 'profit','growth']])
+            print("---win--")
+            print(result_df[result_df['profit'] >= 0][['id', 'profit','growth']])
             idx = input("test :").strip()
             #try:
             if(1):

@@ -31,10 +31,10 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
     print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
-    print(strategy)
+    #print(strategy)
     strategy.log_enable = enable_log
     datah5.cache_mode = True
-    fromdate_date = fromdate - timedelta(days=30)
+    fromdate_date = fromdate - timedelta(days=60 )
     data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate_date,todate=todate,ret_df = True)
 
     #print(data0_df)
@@ -65,7 +65,8 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     data_df_real = datah5.datafromh5(stock_id=stock_id, fromdate=fromdate, todate=todate, ret_df=True)
     result['growth'] = data0_df.iloc[-1]['close']/data_df_real.iloc[0]['close']
     del data_df_real
-    session_dict['transactions'] = result['Transactions']
+    #session_dict['transactions'] = result['Transactions']
+    session_dict['orders'] = strats[0].params.order_requests
     if plot:cerebro.plot()
     if log_fp: log_fp.close()
     fn = output_dir+"/"+taskname+"/"+"%s_%s_%s.pickle" %(stock_id,str(fromdate.date()),str(todate.date()))
