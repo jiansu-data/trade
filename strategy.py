@@ -21,7 +21,7 @@ class StrategyLogger(bt.SignalStrategy):
     )
     def order_requests(self, order_datetime, order_type,order_num, order_price):
         #if self.params.order_requests: self.params.order_requests = collections.OrderedDict()
-        self.params.order_requests[str(self.datas[0].datetime.date(0))] = [order_type, order_num,order_price]
+        self.params.order_requests[str(self.order_date)] = [order_type, order_num,order_price]
     def __init__(self,log_enable = True):
         self.enddate = self.params.enddate
         self.startdate = self.params.startdate
@@ -34,8 +34,22 @@ class StrategyLogger(bt.SignalStrategy):
         if self.log_enable:
             print('%s, %s' % (dt.isoformat(), txt))
             if self.log_file: print('%s, %s' % (dt.isoformat(), txt),file=self.log_file)
-
+    def buy(self,*args,**kwargs):
+        #self.log("buy")
+        self.order_date = self.datas[0].datetime.date(0)
+        super().buy(*args,**kwargs)
+    def sell(self,*args,**kwargs):
+        #self.log("sell")
+        self.order_date = self.datas[0].datetime.date(0)
+        super().sell(*args,**kwargs)
+    def close(self,*args,**kwargs):
+        #self.log("close")
+        self.order_date = self.datas[0].datetime.date(0)
+        super().close(*args,**kwargs)
     def notify_order(self, order):
+        #self.log(order.Status[order.status])
+        if order.status  == order.Created:
+            self.log('Order Submitted/Accepted' + ":" + order.Status[order.status])
         if order.status in [order.Submitted, order.Accepted]:
             # Buy/Sell order submitted/accepted to/by broker - Nothing to do
             #self.log('Order Submitted/Accepted'+":"+order.Status[order.status])
