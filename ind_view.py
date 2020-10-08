@@ -38,7 +38,8 @@ class Viewer(StrategyLogger):
             #print(cur_datetime)
             if cur_datetime_str in orders:
                 # amount	 price	 sid	 symbol	 value
-                (type_,amount,price)=orders[cur_datetime_str]
+                #print("key",cur_datetime_str)
+                (type_,amount,price)= orders[cur_datetime_str]
                 del orders[cur_datetime_str]
                 if type_ == 0:
                     print("buy",cur_datetime)
@@ -68,11 +69,11 @@ if __name__ == "__main__":
                 #sid = "2301"#"9910"
                 #st = Viewer
                 Viewer.session = pickle.load(open("output/test/%s.pickle"%(result_df.iloc[int(idx)]['id']),"rb"))
-                print(Viewer.session)
+                print("order",Viewer.session['orders'])
                 fromdate = datetime.strptime(fromdate,"%Y-%m-%d")
                 todate = datetime.strptime(todate, "%Y-%m-%d")
                 db[sid] = test_stock(sid,result_show= True,plot = True,strategy=Viewer,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate)
-                print(Viewer.session)
+                print("order",Viewer.session['orders'])
             #except:
             if 0:
                 print("exit")

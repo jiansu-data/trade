@@ -8,7 +8,7 @@ import multiprocessing as mp
 import json
 import os
 import os.path
-
+import copy
 from strategy import *
 import EvalAnalyzer
 
@@ -28,6 +28,8 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     from datetime import timedelta
     import EvalAnalyzer
     import pickle
+    import copy
+    import collections
     session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
     print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
@@ -66,7 +68,9 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     result['growth'] = data0_df.iloc[-1]['close']/data_df_real.iloc[0]['close']
     del data_df_real
     #session_dict['transactions'] = result['Transactions']
-    session_dict['orders'] = strats[0].params.order_requests
+    session_dict['orders'] = copy.deepcopy(strats[0].order_requests_data)
+    #print(session_dict['orders'])
+    #strats[0].params.order_requests = collections.OrderedDict()
     if plot:cerebro.plot()
     if log_fp: log_fp.close()
     fn = output_dir+"/"+taskname+"/"+"%s_%s_%s.pickle" %(stock_id,str(fromdate.date()),str(todate.date()))
@@ -235,7 +239,8 @@ if __name__ == "__main__":
         sid = configs["stock_id"]
         enable_log = configs["enable_log"]
 
-        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname)
+        db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname,
+                             fromdate=datetime_from_string(configs['fromdate']),todate = datetime_from_string(configs['todate']))
 
         #db_ta  = db_attrs(db, 'TradeAnalyzer', ta_attr )
         db_ta= db_attrs(db, 'TradeAnalyzerPercentage', tap_attr)

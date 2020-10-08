@@ -17,11 +17,11 @@ class StrategyLogger(bt.SignalStrategy):
     params = (
         ('enddate', None),
         ('startdate',None),
-        ('order_requests',collections.OrderedDict())
+        #('order_requests',collections.OrderedDict())
     )
     def order_requests(self, order_datetime, order_type,order_num, order_price):
-        #if self.params.order_requests: self.params.order_requests = collections.OrderedDict()
-        self.params.order_requests[str(self.order_date)] = [order_type, order_num,order_price]
+        if 'order_requests_data' not in self.__dict__: self.order_requests_data = collections.OrderedDict()
+        self.order_requests_data[str(self.order_date)] = [order_type, order_num,order_price]
     def __init__(self,log_enable = True):
         self.enddate = self.params.enddate
         self.startdate = self.params.startdate
@@ -166,11 +166,10 @@ class MACDS(StrategyLogger):
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if  not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
-            if self.crossup[0]:
+            if self.crossup:
                 self.buy()
         else:
-
-            if self.crossdown[0]:
+            if self.crossdown:
                 self.close()
 
         pass
