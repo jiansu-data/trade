@@ -25,17 +25,20 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     import pandas as pd
     import numpy as np
     from datetime import datetime
+    from datetime import timedelta
     import EvalAnalyzer
     import pickle
     session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
     print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
-    #print(strategy)
+    print(strategy)
     strategy.log_enable = enable_log
     datah5.cache_mode = True
-    data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate,todate=todate,ret_df = True)
+    fromdate_date = fromdate - timedelta(days=30)
+    data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate_date,todate=todate,ret_df = True)
+
     #print(data0_df)
-    cerebro.addstrategy(strategy,enddate=data0_df.index[-2])
+    cerebro.addstrategy(strategy,enddate=data0_df.index[-2],startdate=fromdate)
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     #cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
@@ -59,7 +62,9 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     for e in strats[0].analyzers:
         if result_show :print(type(e),e.get_analysis())
         result[type(e).__name__] = e.get_analysis()
-    result['growth'] = data0_df.iloc[-1]['close']/data0_df.iloc[0]['close']
+    data_df_real = datah5.datafromh5(stock_id=stock_id, fromdate=fromdate, todate=todate, ret_df=True)
+    result['growth'] = data0_df.iloc[-1]['close']/data_df_real.iloc[0]['close']
+    del data_df_real
     session_dict['transactions'] = result['Transactions']
     if plot:cerebro.plot()
     if log_fp: log_fp.close()

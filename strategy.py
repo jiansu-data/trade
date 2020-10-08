@@ -14,8 +14,11 @@ class StrategyLogger(bt.SignalStrategy):
     log_file = None
     params = (
         ('enddate', None),
+        ('startdate',None)
     )
     def __init__(self,log_enable = True):
+        self.enddate = self.params.enddate
+        self.startdate = self.params.startdate
         pass
     def __del__(self):
         pass
@@ -46,6 +49,27 @@ class StrategyLogger(bt.SignalStrategy):
 
         # Write down: no pending order
         self.order = None
+
+    def starttrade(self):
+        print(self.params.startdate, )
+        if self.params.startdate and self.datas[0].datetime.date(0) >self.params.startdate.date():
+            return True
+        else:
+            return False
+
+    def endtrade(self):
+        if  self.position:
+            if self.params.enddate and self.datas[0].datetime.date(0) == self.params.enddate.date():
+                self.log('LAST CLOSE, %.2f' % self.data.close[0])
+                self.close()
+                return True
+        else :
+            return False
+    def runtrade(self):
+        if not  self.starttrade():return False
+        if self.endtrade(): return False
+        return True
+
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
@@ -66,15 +90,12 @@ class BBS(StrategyLogger):
         self.crossdown_top = bt.ind.CrossDown(self.data.close, self.bb.top)
         self.crossdown_mid = bt.ind.CrossDown(self.data.close, self.bb.mid)
         #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
-        self.enddate = self.params.enddate
+        #self.enddate = self.params.enddate
 
 
     def next(self):
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
+
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         #self.log('Close, %.2f' % self.data.close[0])
         if not self.position:
@@ -118,11 +139,7 @@ class MACDS(StrategyLogger):
         self.enddate = self.params.enddate
 
     def next(self):
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if  not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
@@ -143,12 +160,7 @@ class KDS(StrategyLogger):
         self.crossdown = bt.ind.CrossDown(self.kds.lines.percK, self.kds.lines.percD)
         self.enddate = self.params.enddate
     def next(self):
-        #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         if not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
             #if self.kds.k > self.kds.d:
@@ -171,11 +183,7 @@ class RSIS(StrategyLogger):
         self.hold = False
         self.enddate = self.params.enddate
     def next(self):
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
@@ -199,7 +207,6 @@ class DMIS(StrategyLogger):
         self.dmi = bt.ind.DirectionalMovement()
         self.crossup = bt.ind.CrossUp(self.dmi.plusDI, self.dmi.minusDI)
         self.crossdown = bt.ind.CrossDown(self.dmi.plusDI, self.dmi.minusDI)
-        self.enddate = self.params.enddate
     def next(self):
         """
     1.攻擊訊號
@@ -216,11 +223,7 @@ class DMIS(StrategyLogger):
     3.反轉訊號
     當ADX從上升趨勢轉為下降時，代表目前價格變動趨勢減弱，行情可能即將反轉。是輔助判斷漲勢和跌勢的強弱是否延續的反轉訊號。
         """
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if not self.position and self.dmi.adx[0] >self.dmi.adx[-2]:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
@@ -243,13 +246,8 @@ class CCIS(StrategyLogger):
 
         self.buysignal = bt.ind.CrossUp(self.cci.cci,self.cci.params.lowerband )
         self.sellsignal = bt.ind.CrossDown(self.cci.cci,self.cci.params.upperband )
-        self.enddate = self.params.enddate
     def next(self):
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         if not self.position:
             if self.buysignal:
                 #print("up",self.crossup)
@@ -328,7 +326,6 @@ class OBVS(StrategyLogger):
 
         self.buysignal = bt.ind.CrossUp(self.cci.cci,self.cci.params.lowerband )
         self.sellsignal = bt.ind.CrossDown(self.cci.cci,self.cci.params.upperband )
-        self.enddate = self.params.enddate
     def next(self):
         """
 三、ＯＢＶ線的應用法則：
@@ -337,11 +334,7 @@ class OBVS(StrategyLogger):
 3.ＯＢＶ線緩慢上升，屬於買進信號，表示買盤力量加強。
 4.ＯＢＶ線急速上升，屬於賣出信號，表示買盤已盡全力，即將力竭。
         """
-        if  self.position:
-            if self.enddate and self.datas[0].datetime.date(0) == self.enddate.date():
-                self.log('LAST CLOSE, %.2f' % self.data.close[0])
-                self.close()
-                return
+        if not self.runtrade():return
         if not self.position:
             if self.buysignal:
                 #print("up",self.crossup)

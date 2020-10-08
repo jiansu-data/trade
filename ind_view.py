@@ -14,10 +14,10 @@ from strategy import *
 import pickle
 ### get buy information data.
 
-class Viewer(bt.SignalStrategy):
+class Viewer(StrategyLogger):
     session = None
     def __init__(self,enddate=None):
-        self.macd= bt.ind.MACDHisto()
+        #self.macd= bt.ind.MACDHisto()
         self.bband = bt.ind.BollingerBands()
         self.kds = bt.ind.StochasticFull()#bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
         self.rsi = bt.ind.RelativeStrengthIndex()
@@ -29,6 +29,7 @@ class Viewer(bt.SignalStrategy):
         self.obv = OnBalanceVolume()
         self.ma = bt.ind.MovingAverage()
     def next(self):
+
         if self.session:
             trans = self.session['transactions']
             cur_datetime = self.datas[0].datetime.datetime(0)
@@ -37,9 +38,14 @@ class Viewer(bt.SignalStrategy):
                 [(amount,price,sid,symbol,value)]=trans[cur_datetime]
                 del trans[cur_datetime]
                 if value <0:
+                    print("buy",cur_datetime)
                     self.buy()
                 else :
+                    print("sell",cur_datetime)
                     self.sell()
+            else:
+                #print("no time", cur_datetime)
+                pass
 
         pass
 if __name__ == "__main__":
@@ -49,18 +55,21 @@ if __name__ == "__main__":
         while True:
             print(result_df[result_df['profit'] < 0][['id', 'profit']])
             idx = input("test :").strip()
-            try:
-
+            #try:
+            if(1):
                 (sid,fromdate,todate) = result_df.iloc[int(idx)]['id'].split("_")
                 if not sid:
                     break
                 #sid = "2301"#"9910"
                 #st = Viewer
                 Viewer.session = pickle.load(open("output/test/%s.pickle"%(result_df.iloc[int(idx)]['id']),"rb"))
+                print(Viewer.session)
                 fromdate = datetime.strptime(fromdate,"%Y-%m-%d")
                 todate = datetime.strptime(todate, "%Y-%m-%d")
                 db[sid] = test_stock(sid,result_show= True,plot = True,strategy=Viewer,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate)
-            except:
+                print(Viewer.session)
+            #except:
+            if 0:
                 print("exit")
                 exit(9)
                 pass
