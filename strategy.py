@@ -150,25 +150,51 @@ class BBS(StrategyLogger):
             #self.sell(size=1)
         #    self.close()
         pass
-
+property_show = False
 class MACDS(StrategyLogger):
     def __init__(self, enddate=None):
         self.macd= bt.ind.MACDHisto()
+        self.kd = bt.ind.StochasticFull()
 
         self.crossup = bt.ind.CrossUp(self.macd.macd, self.macd.signal)
         self.crossdown = bt.ind.CrossDown(self.macd.macd, self.macd.signal)
         #self.signal_add(bt.SIGNAL_LONG, self.cross_up_mid)
         #self.signal_add(bt.SIGNAL_SHORT, self.crossdown_top)
         self.enddate = self.params.enddate
+        self.sell_k80 = False
+        self.sell_kover = True
+        self.buy_when_warm = False
+        global property_show
+        if not property_show:
+            print("sell if  k over 80:",self.sell_k80)
+            print("sell if  k over :", self.sell_kover)
+            print("sell if buy_when_warm  :", self.buy_when_warm)
+            property_show = True
+
 
     def next(self):
         if not self.runtrade():return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
         if  not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
-            if self.crossup:
-                self.buy()
+
+            tobuy = False
+            if self.crossup: tobuy = True
+            if self.buy_when_warm: tobuy  = False if self.kd.lines.percK[0] >  80 else tobuy
+
+            if tobuy:self.buy()
         else:
+
+            if self.sell_kover:
+                if self.kd.lines.percK[0] > 80 and self.kd.lines.percK[0] < self.kd.lines.percK[-2]  :
+                    self.close()
+                    return
+
+            if self.sell_k80:
+                if self.kd.lines.percK[0] > 80 :
+                    self.close()
+                    return
+
             if self.crossdown:
                 self.close()
 

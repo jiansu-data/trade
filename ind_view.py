@@ -25,14 +25,16 @@ class Viewer(StrategyLogger):
         #self.roc = bt.ind.RateOfChange100()
         self.mtm = bt.ind.Momentum()
         self.cci = bt.ind.CommodityChannelIndex()
-        self.atr = bt.ind.ATR()
+        #self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
-        self.obv = OnBalanceVolume()
+        #self.obv = OnBalanceVolume()
         self.ma = bt.ind.MovingAverage()
     def next(self):
 
         if self.session:
             orders = self.session['orders']
+            if orders == None:
+                return
             cur_datetime = self.datas[0].datetime.datetime(0)
             cur_datetime_str = str(cur_datetime.date())
             #print(cur_datetime)
@@ -57,9 +59,9 @@ if __name__ == "__main__":
         result_df = pd.read_csv("output/test/result.csv")
         #print(result_df)
         while True:
-            print(result_df[result_df['profit'] < 0][['id', 'profit','growth']])
+            print(result_df[result_df['profit'] < 0][['id', 'profit','growth']].sort_values(by=['profit']))
             print("---win--")
-            print(result_df[result_df['profit'] >= 0][['id', 'profit','growth']])
+            print(result_df[result_df['profit'] >= 0][['id', 'profit','growth']].sort_values(by=['profit']))
             idx = input("test :").strip()
             #try:
             if(1):

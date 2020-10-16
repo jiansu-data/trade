@@ -20,8 +20,25 @@ def datafromh5(h5_file= "data/historical_data.h5",stock_id="2330",fromdate=None,
             cache_map[h5_file] = df
         else:
             df = cache_map[h5_file]
-    df.columns = ['open', 'high', 'low', 'close', 'volume', 'openinterest', 'Stock Splits',
+    df.columns = ['open', 'high', 'low', 'close', 'volume', 'Dividends', 'Stock Splits',
        'STOCK_ID', 'Adj Close']
+    """
+    除權息參考價（平盤價）＝（除權息前一日收盤價− 現金股利 ） ／ （每1張＋配股張數）
+    df.iloc[0,7] = 0
+    (x,y)  = df.shape
+    df['adjust_diff'] = []
+    for i in range(1,x):
+        adjust_diff = df.iloc[i-1, 3]*(1+ df.iloc[i, 6])+ df.iloc[i,5]  - df.iloc[i-1, 3]
+        
+        df.iloc[i, 8] = df.iloc[i-1, 8]+ adjust_diff
+    
+    for 
+    df.open = df.open+ df['adjust_diff']]
+    df.high = df.high+ df['adjust_diff']]
+    df.low = df.low+ df['adjust_diff']]
+    df.close = df.close+ df['adjust_diff']]
+    
+    """
     stock_df = df[df.STOCK_ID == stock_id]
     stock_df = stock_df.drop(columns  = "STOCK_ID")
     if fromdate:

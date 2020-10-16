@@ -67,8 +67,10 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     data_df_real = datah5.datafromh5(stock_id=stock_id, fromdate=fromdate, todate=todate, ret_df=True)
     result['growth'] = data0_df.iloc[-1]['close']/data_df_real.iloc[0]['close']
     del data_df_real
-    #session_dict['transactions'] = result['Transactions']
-    session_dict['orders'] = copy.deepcopy(strats[0].order_requests_data)
+    session_dict['orders'] = None
+    if "order_requests_data" in strats[0].__dict__:
+        session_dict['orders'] = copy.deepcopy(strats[0].order_requests_data)
+
     #print(session_dict['orders'])
     #strats[0].params.order_requests = collections.OrderedDict()
     if plot:cerebro.plot()
@@ -288,6 +290,16 @@ if __name__ == "__main__":
             #db_df = db_ta
         db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
+        print("---sum---")
+        overview_db = db_df.sum()
+        overview_db.score  /=db_df.shape[0]
+        overview_db.profit /= db_df.shape[0]
+        overview_db.mdd = db_df.mdd.min()
+        overview_db.growth /= db_df.shape[0]
+        overview_db['median'] = db_df.profit.median()
+        overview_db['std'] = db_df.profit.std()
+
+        print(overview_db)
         print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
         #db_df.to_csv(tasktime+".csv")
         #global tasktimestamp
@@ -323,6 +335,8 @@ if __name__ == "__main__":
             db_df = pd.concat([x, db_df], axis=1)
         db_df['growth'] = pd.Series(db_attr(db, 'growth', lambda x: x))
         print(db_df)
+        print("---sum---")
+        print(db_df.sum())
         print("win rate:",db_df[db_df['profit']>0]['profit'].count()/db_df['profit'].count())
         #db_df.to_csv(tasktime+".csv")
         #global tasktimestamp
