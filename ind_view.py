@@ -28,7 +28,8 @@ class Viewer(StrategyLogger):
         self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
         self.obv = OnBalanceVolume()
-        self.ma = bt.ind.MovingAverageSimple()
+        self.ma5 = bt.ind.MovingAverageSimple(period= 5)
+        #self.ma20 = bt.ind.MovingAverageSimple(period=20)
     def next(self):
 
         if self.session:
