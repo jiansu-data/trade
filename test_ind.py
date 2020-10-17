@@ -33,12 +33,11 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     session_dict = {"stock_id":stock_id,"fromdate":fromdate,"todate":todate,"strategy":str(strategy)}
     print(stock_id,fromdate,todate)
     cerebro = bt.Cerebro()
-    #print(strategy)
+    print(taskname,strategy)
     strategy.log_enable = enable_log
     datah5.cache_mode = True
     fromdate_date = fromdate - timedelta(days=60 )
     data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate_date,todate=todate,ret_df = True)
-
     #print(data0_df)
     cerebro.addstrategy(strategy,enddate=data0_df.index[-2],startdate=fromdate)
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
@@ -218,16 +217,9 @@ configs = json.load(open(config_file))
 if args.cpu : configs['cpu'] = args.cpu
 if args.taskname: configs['taskname'] = args.taskname
 method = configs['mode']
-if configs['strategy']  == "bband":configs['strategy']  = BBS
-if configs['strategy']  == "kd":configs['strategy']  = KDS
-if configs['strategy']  == "macd":configs['strategy']  = MACDS
-if configs['strategy']  == "rsi":configs['strategy']  = RSIS
-if configs['strategy']  == "dmi":configs['strategy']  = DMIS
-if configs['strategy']  == "cci":configs['strategy']  = CCIS
-if not configs['strategy']  :configs['strategy']  = BBS
-
 taskname = configs["taskname"] or timestamp()
-
+task_strategy = "-"+configs['strategy']
+configs['strategy'] = strategy_by_name(configs['strategy'])
 def datetime_from_string(string):
     return datetime(*list(map(lambda x: int(x), string.split("-"))))
 
@@ -240,7 +232,7 @@ if __name__ == "__main__":
         db = {}
         sid = configs["stock_id"]
         enable_log = configs["enable_log"]
-
+        taskname += task_strategy
         db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = taskname,
                              fromdate=datetime_from_string(configs['fromdate']),todate = datetime_from_string(configs['todate']))
 
@@ -256,13 +248,14 @@ if __name__ == "__main__":
         print(db_df)
     elif method == "type":
         taskname = configs["taskname"] or timestamp()
+        taskname += task_strategy
         type50 = pd.read_csv(configs["stock_id"], header=None)
         db = {}
         ps = []
         m = mp.Manager()
         q = m.JoinableQueue()
         oq = m.JoinableQueue()
-        args = {"taskname":taskname}
+        args = {"taskname":taskname,}
         cpu = configs["cpu"] or int(os.cpu_count() *3//4)
         for i in range(len(type50[0])):
             each = type50.iloc[i]
@@ -307,6 +300,7 @@ if __name__ == "__main__":
     else:
         #multi_stock_test()
         taskname = configs["taskname"] or timestamp()
+        taskname += task_strategy
         t50 = pd.read_csv("data/tw50.csv", header=None)
         db = {}
         ps = []

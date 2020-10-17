@@ -11,6 +11,12 @@ import os.path
 import collections
 def datetime_from_string(string):
     return datetime(*list(map(lambda x: int(x), string.split("-"))))
+
+def strategy_by_name(name):
+    strategy_map = { "bband":  BBS,"kd":KDS,"macd": MACDS,"rsi":  RSIS,"dmi":  DMIS ,"cci": CCIS, "":StrategyFramework}
+    if name in strategy_map: return strategy_map[name]
+    return StrategyFramework
+
 class StrategyLogger(bt.SignalStrategy):
     log_enable = True
     log_file = None
@@ -100,6 +106,194 @@ class StrategyLogger(bt.SignalStrategy):
         self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
                  (trade.pnl, trade.pnlcomm))
 
+class Trick:
+    sg_tp = ["+" , "-" , ""]
+    sg_up = "+"
+    sg_down = "-"
+    sg_wait = ""
+    st_tp = [90, 70,50,30,10]
+    name = "trick"
+    def __init__(self,strategy, datas):
+        self.st = strategy
+        self.datas = datas
+    def signal(self):
+        return  self.sg_tp[0]
+    def strength(self):
+        return self.st_tp[0]
+    def action(self):
+        """
+        more stock?
+        :return:
+        """
+        return
+    def cross(self,up,a,b):
+        gt, lt = ((lambda  x,y: x> y), (lambda x,y:x<y))
+        f1,f2 = gt,lt
+        if not up:
+            f1,f2  = lt,gt
+        if f1(a[0] , b[0]) and f2(a[-1] , b[-1]):
+            return True
+        return False
+    def cross_up(self,a,b):
+        return self.cross(True,a,b)
+    def cross_down(self,a,b):
+        return self.cross(False,a,b)
+
+class DrawDown:
+    def __init__(self):
+        self.highest  = 0
+        pass
+    def next(self, value):
+        if value > self.highest:
+            self.highest = value
+        if value == 0:
+            self.highest = 0
+        #if value and self.highest != value:
+        #    print( ( self.highest -value)/self.highest , self.highest,value )
+        return ( self.highest -value)/self.highest if self.highest else 0
+
+class MACD_Trick(Trick):
+    name = "macd"
+    def __init__(self, strategy,datas):
+        super(MACD_Trick,self).__init__(strategy,datas)
+        self.macd  = datas[0]
+
+    def signal(self):
+        if self.cross_up(self.macd.macd,self.macd.signal) and self.macd.macd < 0 and self.macd.signal < 0:
+            self.st.log('%s signal, %s' % (self.name,self.sg_up))
+            return self.sg_up
+        """
+        if self.cross_up(self.macd.macd,self.macd.signal):
+            self.st.log('%s signal, %s' % (self.name,self.sg_up))
+            return self.sg_up
+        """
+        if self.cross_down(self.macd.macd,self.macd.signal):
+            self.st.log('%s signal, %s' % (self.name,self.sg_down))
+            return self.sg_down
+        return self.sg_wait
+
+    def strength(self):
+        if self.macd.macd > 0 and self.macd.signal > 0:
+            return 75
+        if self.macd.macd < 0 and self.macd.signal < 0:
+            return 25
+        return 50
+
+class RSI_Trick(Trick):
+    name = "rsi"
+    def __init__(self, strategy,datas):
+        super(RSI_Trick,self).__init__(strategy,datas)
+        self.rsi  = datas[0]
+
+    def signal(self):
+        if self.rsi.rsi[0] <30   and self.rsi.rsi[0] and self.rsi.rsi[0] > self.rsi.rsi[-2]:
+            self.st.log('%s signal, %s' % (self.name,self.sg_up))
+            return self.sg_up
+        if self.rsi.rsi[0] >70  and self.rsi.rsi[0] and self.rsi.rsi[0] > self.rsi.rsi[-2]:
+            self.st.log('%s signal, %s' % (self.name,self.sg_down))
+            return self.sg_down
+        return self.sg_wait
+
+    def strength(self):
+        if self.rsi.rsi[0] > 30 and self.rsi.rsi[0] <50:
+            return 25
+        if self.rsi.rsi[0] > 70 and self.rsi.rsi[0] > 50:
+            return 75
+        return 50
+
+class CCI_Trick(Trick):
+    name = "rsi"
+    def __init__(self, strategy,datas):
+        super(CCI_Trick,self).__init__(strategy,datas)
+        self.ind  = datas[0]
+
+    def signal(self):
+        return self.sg_wait
+
+    def strength(self):
+        if self.ind.cci[0] > 30 and self.ind.cci[0] <50:
+            return 25
+        if self.ind.rsi[0] > 70 and self.ind.cci[0] > 50:
+            return 75
+        return 50
+
+class  KD_Trick(Trick):
+    name = "rsi"
+    def __init__(self, strategy,datas):
+        super(KD_Trick,self).__init__(strategy,datas)
+        self.kd  = datas[0]
+
+    def signal(self):
+        if self.cross_up(self.kd.lines.percK,self.kd.lines.percD):
+            self.st.log('%s signal, %s' % (self.name,self.sg_up))
+            return self.sg_up
+        if self.cross_down(self.kd.lines.percK,self.kd.lines.percD):
+            self.st.log('%s signal, %s' % (self.name,self.sg_down))
+            return self.sg_down
+        return self.sg_wait
+
+    def strength(self):
+        if self.kd.lines.percK[0] > 20 and self.kd.lines.percK[0] <50:
+            return 25
+        if self.kd.lines.percK[0] < 70 and self.kd.lines.percK[0] > 50:
+            return 75
+        return 50
+
+class StrategyFramework(StrategyLogger):
+    def __init__(self):
+        self.macd = bt.ind.MACDHisto()
+        self.macd_tk = MACD_Trick(strategy=self, datas=[self.macd])
+        self.dd = DrawDown()
+        self.rsi = bt.ind.RelativeStrengthIndex()
+        self.rsi_tk = RSI_Trick(strategy=self, datas=[self.rsi])
+        self.kd = bt.ind.StochasticFull()
+        self.kd_tk = KD_Trick(strategy=self, datas=[self.kd])
+
+    def next(self):
+        if not self.runtrade(): return
+        macd_signal = self.macd_tk.signal()
+        kd_signal = self.kd_tk.signal()
+        rsi_signal = self.rsi_tk.signal()
+
+        down  = self.dd.next(self.data.close[0] if self.position else 0)
+        if not self.position:
+            if macd_signal== Trick.sg_up:
+                """
+                if self.rsi_tk.strength() < 50:
+                    self.log('ignore because rsi %d ' % self.rsi_tk.strength())
+                    return
+                if self.kd_tk.strength() < 50:
+                    self.log('ignore because kd %d ' % self.kd_tk.strength())
+                    return
+                """
+                self.log('BUY CREATE, %.2f' % self.data.close[0])
+                self.buy()
+        else:
+            """
+            if self.rsi_tk.strength() < 50:
+                self.log('close because rsi %d ' % self.rsi_tk.strength())
+                self.close()
+                return
+            if self.kd_tk.strength() < 50:
+                self.log('close  because kd %d ' % self.kd_tk.strength())
+                self.close()
+                return
+            
+            if kd_signal == Trick.sg_down:
+                self.close()
+                return
+            """
+            if macd_signal == Trick.sg_down:
+                self.close()
+                return
+            """
+            if down > 0.05:
+                self.log('down %f close' % down)
+                self.close()
+                return
+            """
+
+
 class BBS(StrategyLogger):
 
     def __init__(self):
@@ -155,6 +349,10 @@ class MACDS(StrategyLogger):
     def __init__(self, enddate=None):
         self.macd= bt.ind.MACDHisto()
         self.kd = bt.ind.StochasticFull()
+        self.dmi = bt.ind.DirectionalMovement()
+        self.roc = bt.ind.RateOfChange100()
+        self.bband = bt.ind.BollingerBands()
+        self.rsi = bt.ind.RelativeStrengthIndex()
 
         self.crossup = bt.ind.CrossUp(self.macd.macd, self.macd.signal)
         self.crossdown = bt.ind.CrossDown(self.macd.macd, self.macd.signal)
@@ -163,12 +361,16 @@ class MACDS(StrategyLogger):
         self.enddate = self.params.enddate
         self.sell_k80 = False
         self.sell_kover = True
-        self.buy_when_warm = False
+        self.buy_when_warm = True
+        self.buy_when_trend = False
+        self.buy_when_trend_roc = True
         global property_show
         if not property_show:
             print("sell if  k over 80:",self.sell_k80)
             print("sell if  k over :", self.sell_kover)
             print("sell if buy_when_warm  :", self.buy_when_warm)
+            print("sell if buy_when_trend  :", self.buy_when_trend)
+            print("sell if buy_when_trend_roc  :", self.buy_when_trend_roc)
             property_show = True
 
 
@@ -181,6 +383,8 @@ class MACDS(StrategyLogger):
             tobuy = False
             if self.crossup: tobuy = True
             if self.buy_when_warm: tobuy  = False if self.kd.lines.percK[0] >  80 else tobuy
+            if self.buy_when_trend: tobuy = tobuy if self.dmi.lines.adx[0] > 25 else False
+            if self.buy_when_warm: tobuy = False if self.rsi.lines.rsi[0] > 70 else tobuy
 
             if tobuy:self.buy()
         else:
@@ -273,10 +477,10 @@ class DMIS(StrategyLogger):
         """
         if not self.runtrade():return
         #if self.cross_up_mid[0]: print(self.cross_up_mid[0])
-        if not self.position and self.dmi.adx[0] >self.dmi.adx[-2]:
+        if not self.position :
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
             #if self.kds.k > self.kds.d:
-            if self.crossup:
+            if self.crossup and self.dmi.adx [0] >20:
                 #print("up",self.crossup)
                 self.hold = True
                 self.buy()

@@ -23,12 +23,12 @@ class Viewer(StrategyLogger):
         self.kds = bt.ind.StochasticFull()#bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
         self.rsi = bt.ind.RelativeStrengthIndex()
         #self.roc = bt.ind.RateOfChange100()
-        self.mtm = bt.ind.Momentum()
+        #self.mtm = bt.ind.Momentum()
         self.cci = bt.ind.CommodityChannelIndex()
-        #self.atr = bt.ind.ATR()
+        self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
-        #self.obv = OnBalanceVolume()
-        self.ma = bt.ind.MovingAverage()
+        self.obv = OnBalanceVolume()
+        self.ma = bt.ind.MovingAverageSimple()
     def next(self):
 
         if self.session:
@@ -56,12 +56,15 @@ class Viewer(StrategyLogger):
         pass
 if __name__ == "__main__":
         db = {}
-        result_df = pd.read_csv("output/test/result.csv")
+        taskname = "test-macd"
+        task_st = "macd"
+        result_df = pd.read_csv("output/%s/result.csv"%(taskname))
+
         #print(result_df)
         while True:
-            print(result_df[result_df['profit'] < 0][['id', 'profit','growth']].sort_values(by=['profit']))
+            print(result_df[result_df['profit'] < 0][['id', 'profit','score','growth']].sort_values(by=['profit']))
             print("---win--")
-            print(result_df[result_df['profit'] >= 0][['id', 'profit','growth']].sort_values(by=['profit']))
+            print(result_df[result_df['profit'] >= 0][['id', 'profit','score','growth']].sort_values(by=['profit']))
             idx = input("test :").strip()
             #try:
             if(1):
@@ -70,11 +73,15 @@ if __name__ == "__main__":
                     break
                 #sid = "2301"#"9910"
                 #st = Viewer
-                Viewer.session = pickle.load(open("output/test/%s.pickle"%(result_df.iloc[int(idx)]['id']),"rb"))
+                Viewer.session = pickle.load(open("output/%s/%s.pickle"%(taskname,result_df.iloc[int(idx)]['id']),"rb"))
                 print("order",Viewer.session['orders'])
                 fromdate = datetime.strptime(fromdate,"%Y-%m-%d")
                 todate = datetime.strptime(todate, "%Y-%m-%d")
-                db[sid] = test_stock(sid,result_show= True,plot = True,strategy=Viewer,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate)
+                real_test = input("real test :")
+                st = Viewer
+                if real_test: st = strategy_by_name(task_st)
+
+                db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate)
                 print("order",Viewer.session['orders'])
             #except:
             if 0:
