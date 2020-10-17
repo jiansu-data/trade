@@ -407,21 +407,35 @@ class MACDS(StrategyLogger):
 class KDS(StrategyLogger):
     def __init__(self, enddate=None):
         self.kds = bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
+        self.cci = bt.ind.CommodityChannelIndex()
 
         self.crossup = bt.ind.CrossUp(self.kds.lines.percK, self.kds.lines.percD)
         self.crossdown = bt.ind.CrossDown(self.kds.lines.percK, self.kds.lines.percD)
         self.enddate = self.params.enddate
+        self.buy_only_if_cci_pass = True
+
     def next(self):
         if not self.runtrade():return
         if not self.position:
             #if self.data.close >self.bb.mid[0] and self.data.close <self.bb.mid[-1]:
             #if self.kds.k > self.kds.d:
-            if self.crossup:
+            tobuy= False
+            if self.crossup[0]:
                 #print("up",self.crossup)
+                tobuy= True
+            if self.kds.lines.percK[0] >70:
+                tobuy = False
+
+            if self.cci.lines[0] <-50:
+                tobuy = False
+
+            if self.kds.lines.percK[0] <= self.kds.lines.percK[-2]:
+                tobuy = False
+            if tobuy:
                 self.buy()
         else:
             #if self.kds.k < self.kds.d:
-            if self.crossdown:
+            if self.crossdown[0]:
                 #print("down", self.crossdown)
                 self.close()
         pass
