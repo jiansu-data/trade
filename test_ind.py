@@ -18,7 +18,7 @@ if not os.path.isdir(output_dir):
 
 
 def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False,
-               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),taskname = None):
+               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),taskname = None,save_result = True):
     from datetime import datetime
     import backtrader as bt
     import helper.datah5 as datah5
@@ -47,15 +47,15 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.Transactions)
-    cerebro.broker.setcommission(commission=0.1425+0.3) ## this is an approach
+    #cerebro.broker.setcommission(commission=0.001425+0.003) ## this is an approach
 
     #cerebro.addanalyzer(bt.analyzers.PyFolio)
     #cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir
-    if not os.path.isdir(output_dir+"/"+taskname):
+    if save_result and not os.path.isdir(output_dir+"/"+taskname):
         os.mkdir(output_dir+"/"+taskname)
     log_fp = None
-    if configs["save_result"]:
+    if configs["save_result"] and save_result:
         fn = output_dir+"/"+taskname+"/"+"%s_writer.csv" %stock_id
         cerebro.addwriter(bt.WriterFile, csv=True,out=fn)
         #log_fp = open(output_dir+"/"+taskname+"/"+stock_id+".log","a")
@@ -78,7 +78,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     if log_fp: log_fp.close()
     fn = output_dir+"/"+taskname+"/"+"%s_%s_%s.pickle" %(stock_id,str(fromdate.date()),str(todate.date()))
     print(fn)
-    pickle.dump(session_dict,open(fn,"wb"))
+    if save_result : pickle.dump(session_dict,open(fn,"wb"))
     return result
 
 def db_attr(db,attr,f):

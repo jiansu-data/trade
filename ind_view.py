@@ -22,14 +22,17 @@ class Viewer(StrategyLogger):
         self.bband = bt.ind.BollingerBands()
         self.kds = bt.ind.StochasticFull()#bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
         self.rsi = bt.ind.RelativeStrengthIndex()
-        self.roc = bt.ind.RateOfChange100()
+        self.roc = bt.ind.RateOfChange100(period=5)
         #self.mtm = bt.ind.Momentum()
         self.cci = bt.ind.CommodityChannelIndex()
         self.atr = bt.ind.ATR()
         self.dmi = bt.ind.DirectionalMovement()
         self.obv = OnBalanceVolume()
         self.ma5 = bt.ind.MovingAverageSimple(period= 5)
+        self.ma10 = bt.ind.MovingAverageSimple(period=10)
+        #self.bias = bt.ind.
         #self.ma20 = bt.ind.MovingAverageSimple(period=20)
+
     def next(self):
 
         if self.session:
@@ -57,7 +60,7 @@ class Viewer(StrategyLogger):
         pass
 if __name__ == "__main__":
         db = {}
-        taskname = "test-kd"
+        taskname = "test-bbtk"
         task_st = taskname.split("-")[1]
         result_df = pd.read_csv("output/%s/result.csv"%(taskname))
 
@@ -82,7 +85,7 @@ if __name__ == "__main__":
                 st = Viewer
                 if real_test: st = strategy_by_name(task_st)
 
-                db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate)
+                db[sid] = test_stock(sid,result_show= True,plot = True,strategy=st,enable_log = True,taskname = timestamp(),fromdate= fromdate,todate=todate,save_result= False)
                 print("order",Viewer.session['orders'])
             #except:
             if 0:
