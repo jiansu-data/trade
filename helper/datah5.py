@@ -113,6 +113,60 @@ def update_h5(h5_file= "data/historical_data.h5",start = None):
     if h5_file in cache_map:
         del cache_map[h5_file]
 
+def get_sanda_df(date):
+    import requests
+    import pandas as pd
+    import re
+    link = "https://www.twse.com.tw/fund/T86?response=csv&date=%s&selectType=ALL"%(date.strftime("%Y%m%d"))
+    r = requests.get(link)
+    if r.status_code == 200:
+        import functools
+        db = []
+        lines = r.text.split("\r\n")
+        #print("line",lines)
+        if len(lines) <=2 :return None
+        header = lines[1].split('","')[:-1]
+        header  = list(map(lambda x: x.replace(',',"").replace('"',"").replace(" ","") , header))
+        #print(header)
+        for e in lines[2:-10]:
+            #print(e)
+            #print(e.split(",")[:-1])
+            #db.append(e.split('","')[:-1])
+            rows = e.split('","')[:-1]
+            row_data =list(map(lambda x: x.replace(',',"").replace('"',"").replace(" ","") , rows))
+            db.append(row_data)
+        #print(db)
+        df = pd.DataFrame(db)
+        #df['date']
+        df.columns = header
+        df['datetime']= date
+        #print("show",date)
+        return df
+    else:
+        print("fail :", r.status_code,link)
+
+
+
+
+
+def build_sd_date(filename,start, end):
+    import numpy
+    date = start
+    df_sd = pd.DataFrame()
+    while date != end:
+        df = get_sanda_df(date.date())
+        print(date)
+        if type(df) == type(df_sd):
+            df_sd = pd.concat([df_sd, df])
+        date += datetime.timedelta(days=1)
+
+    for e in df_sd.columns:
+        #print(e)
+        if e != None and e != '證券名稱' and e != '證券代號' and e != '自營商買進股數(避險)' and e != 'datetime':
+            df_sd[e] = df_sd[e].astype(np.int32)
+    df_sd.to_hdf(filename,key= 's')
+    return df_sd
+
 
 if __name__ == "__main__":
     # Create a cerebro entity
