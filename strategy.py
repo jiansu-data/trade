@@ -14,7 +14,7 @@ def datetime_from_string(string):
 
 def strategy_by_name(name):
     strategy_map = { "bband":  BBS,"kd":KDS,"macd": MACDS,"rsi":  RSIS,"dmi":  DMIS ,"cci": CCIS, "":StrategyFramework,
-                     "bbtk":StrategyBBand}
+                     "bbtk":StrategyBBand,"ma":StrategyMA}
     if name in strategy_map: return strategy_map[name]
     return StrategyFramework
 
@@ -277,6 +277,23 @@ class  BB_Trick(Trick):
         if self.st.data.close[0 ]> self.bband.lines.mid[0]:
             return 75
         return 50
+class MA_Trick(Trick):
+    name = "ma"
+    def __init__(self, strategy,datas):
+        super(MA_Trick,self).__init__(strategy,datas)
+        self.ma  = datas[0]
+
+    def signal(self):
+        if self.cross_up(self.st.data,self.ma.sma) :
+            #self.st.log('%s signal, %s' % (self.name,self.sg_up))
+            return self.sg_up
+        if self.cross_down(self.st.data,self.ma.sma):
+            #self.st.log('%s signal, %s' % (self.name,self.sg_down))
+            return self.sg_down
+        return self.sg_wait
+
+    def strength(self):
+        return 50
 
 class StrategyFramework(StrategyLogger):
     def __init__(self):
@@ -299,7 +316,7 @@ class StrategyFramework(StrategyLogger):
         rsi_signal = self.rsi_tk.signal()
 
 
-        down  = self.dd.next(self.data.close[0] if self.position else 0)
+        down  = self.dd.next(self.data.close[0] if self.position else 0,self.position)
         if not self.position:
             if macd_signal== Trick.sg_up:
                 """
@@ -338,6 +355,56 @@ class StrategyFramework(StrategyLogger):
             """
 
 
+class StrategyMA(StrategyLogger):
+    def __init__(self):
+        """
+        self.macd = bt.ind.MACDHisto()
+        self.macd_tk = MACD_Trick(strategy=self, datas=[self.macd])
+        self.dd = DrawDown()
+        self.rsi = bt.ind.RelativeStrengthIndex()
+        self.rsi_tk = RSI_Trick(strategy=self, datas=[self.rsi])
+        self.kd = bt.ind.StochasticFull()
+        self.kd_tk = KD_Trick(strategy=self, datas=[self.kd])
+        self.tks = [self.macd_tk, self.rsi_tk, self.kd_tk]
+
+        """
+        self.ma5 = bt.ind.MovingAverageSimple(period = 5)
+        self.ma20 = bt.ind.MovingAverageSimple(period = 20)
+        self.ma_tk = MA_Trick(strategy=self, datas=[self.ma5])
+        self.dd = DrawDown_Trick(5)
+        self.kd = bt.ind.StochasticFull()
+        self.cci = bt.ind.CommodityChannelIndex()
+
+    def trick_infomation(self):
+        for e in self.tks:
+            print(e.name, "signal : ", e.signal(), "strength:", e.strength())
+
+    def next(self):
+        if not self.runtrade(): return
+        if not self.position:
+            if self.ma_tk.cross_up(self.ma5.lines.sma, self.ma20.lines.sma):
+                #if self.kd.lines.percK[0]<80:
+                if self.cci.lines.cci[0] < 100:
+                    self.buy()
+        else:
+            if self.ma_tk.cross_down(self.ma5.lines.sma, self.ma20.lines.sma):
+                self.close()
+        """
+        signal = self.ma_tk.signal()
+
+        down = self.dd.next(self.data.close[0] if self.position else 0,self.position)
+        if not self.position:
+            if signal == Trick.sg_up:
+
+                if self.data.close[0]  > self.ma20.lines.sma[0]:
+                    self.log('BUY CREATE, %.2f' % self.data.close[0])
+                    self.buy()
+        else:
+            if signal == Trick.sg_down :
+                self.close()
+                return
+                
+        """
 class StrategyBBand(StrategyLogger):
     def __init__(self):
         #self.macd = bt.ind.MACDHisto()
@@ -800,3 +867,25 @@ class OBVS(StrategyLogger):
                 #print("down", self.crossdown)
                 self.close()
         pass
+"""
+class BIAS(bt.ind.MovingAverageSimple):
+    '''
+    Non-weighted average of the last n periods
+
+    Formula:
+      - movav = Sum(data, period) / period
+
+    See also:
+      - http://en.wikipedia.org/wiki/Moving_average#Simple_moving_average
+    '''
+    alias = ('BIAS')
+    lines = ('bias',)
+
+    def __init__(self):
+        # Before super to ensure mixins (right-hand side in subclassing)
+        # can see the assignment operation and operate on the line
+        self.lines[0] = Average(self.data, period=self.p.period)
+
+        super(bt.ind.MovingAverageSimple, self).__init__()
+        self.bias = 
+"""

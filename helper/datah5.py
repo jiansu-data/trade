@@ -4,6 +4,8 @@ import pandas as pd
 from datetime import datetime
 import backtrader as bt
 import numpy as np
+import time
+import os.path
 
 cache_mode = False
 cache_map = {}
@@ -50,6 +52,67 @@ def datafromh5(h5_file= "data/historical_data.h5",stock_id="2330",fromdate=None,
     if ret_df:
         return stock_df
     return bt.feeds.PandasData(dataname=stock_df)
+
+
+def get_yahoo_data( stock_id, start = None, end = datetime.now().date() ):
+    import yfinance as yf
+    data = yf.Ticker(stock_id)
+    if start == None:
+        df = data.history(start=start, end = end)
+    else:
+        df = data.history(period="max")
+    return df
+
+
+def update_h5(h5_file= "data/historical_data.h5",start = None):
+    import twstock
+    global cache_map
+    global cache_mode
+    last_date = None
+
+    t1 = datetime.now()
+    src_df = None
+    if not cache_mode and os.path.exists(h5_file):
+        src_df = pd.read_hdf(h5_file)
+        last_date = src_df.index.max().date() + datetime.timedelta(days=1)
+    if start:
+        last_date = start
+
+    if cache_mode :
+        if h5_file not in cache_map:
+            if os.path.exists(h5_file):
+                src_df = pd.read_hdf(h5_file)
+                cache_map[h5_file] = src_df
+                last_date = src_df.index.max().date() + datetime.timedelta(days=1)
+
+        else:
+            df = cache_map[h5_file]
+    stock_list = {}
+    for e in twstock.twse:
+        stock = (twstock.twse[e])
+        if stock.type == "股票":
+            stock_list[stock.code] = stock.name
+    # stock_list = pd.read_csv("data" + '/stock_id.csv')
+    # stock_list.rename(columns={'證券代號':'STOCK_ID','證券名稱':'NAME'}, inplace=True)
+
+    historical_data = pd.DataFrame()
+
+    stock_done = []
+    for e in stock_list:
+        stock_id = e + '.TW'
+        new_df = get_yahoo_data(stock_id, last_date)
+        new_df['STOCK_ID'] = e
+        historical_data = pd.concat([historical_data, new_df])
+
+        time.sleep(0.8)
+        stock_done.append(stock_id)
+        print(stock_id, "progress: ", len(stock_done) / len(stock_list) * 100)
+    if src_df:
+        historical_data = pd.concat([src_df, historical_data])
+    historical_data.to_hdf( h5_file, key='s')
+    if h5_file in cache_map:
+        del cache_map[h5_file]
+
 
 if __name__ == "__main__":
     # Create a cerebro entity

@@ -47,8 +47,10 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.Transactions)
-    #cerebro.broker.setcommission(commission=0.001425+0.003) ## this is an approach
-
+    """
+    cerebro.broker.setcommission(commission=0.001425,name = ".buy") ## this is an approach
+    cerebro.broker.setcommission(commission=0.003,name = ".sell") ## this is an approach
+    """
     #cerebro.addanalyzer(bt.analyzers.PyFolio)
     #cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir
