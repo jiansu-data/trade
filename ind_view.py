@@ -21,7 +21,7 @@ class Viewer(StrategyLogger):
         self.macd= bt.ind.MACDHisto()
         self.bband = bt.ind.BollingerBands()
         self.kds = bt.ind.StochasticFull()#bt.ind.StochasticFull(self.datas[0], period = 9, period_dfast= 3, period_dslow = 3)
-        self.rsi = bt.ind.RelativeStrengthIndex()
+        self.rsi = bt.ind.RelativeStrengthIndex(period=5)
         self.roc = bt.ind.RateOfChange100(period=5)
         #self.mtm = bt.ind.Momentum()
         self.cci = bt.ind.CommodityChannelIndex()
@@ -60,7 +60,7 @@ class Viewer(StrategyLogger):
         pass
 if __name__ == "__main__":
         db = {}
-        taskname = "test-bbtk"
+        taskname = "test-ma"
         task_st = taskname.split("-")[1]
         result_df = pd.read_csv("output/%s/result.csv"%(taskname))
 

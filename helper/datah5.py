@@ -2,6 +2,7 @@ from datetime import datetime
 import backtrader as bt
 import pandas as pd
 from datetime import datetime
+from datetime import timedelta
 import backtrader as bt
 import numpy as np
 import time
@@ -117,6 +118,7 @@ def get_sanda_df(date):
     import requests
     import pandas as pd
     import re
+
     link = "https://www.twse.com.tw/fund/T86?response=csv&date=%s&selectType=ALL"%(date.strftime("%Y%m%d"))
     r = requests.get(link)
     if r.status_code == 200:
@@ -124,7 +126,9 @@ def get_sanda_df(date):
         db = []
         lines = r.text.split("\r\n")
         #print("line",lines)
-        if len(lines) <=2 :return None
+        if len(lines) <=10 :
+            #print(len(lines))
+            return None
         header = lines[1].split('","')[:-1]
         header  = list(map(lambda x: x.replace(',',"").replace('"',"").replace(" ","") , header))
         #print(header)
@@ -141,31 +145,54 @@ def get_sanda_df(date):
         df.columns = header
         df['datetime']= date
         #print("show",date)
+        #df = df.dropna(how='all',inplace=True)
         return df
     else:
         print("fail :", r.status_code,link)
-
-
-
+        return None
 
 
 def build_sd_date(filename,start, end):
     import numpy
+    import random
     date = start
     df_sd = pd.DataFrame()
     while date != end:
+        time.sleep(random.random() * 5)
         df = get_sanda_df(date.date())
         print(date)
+        #print(df,type(df))
+        if type(df) != type(df_sd):
+            date += timedelta(days=1)
+            #print("conti")
+            continue
+        #print(df)
+
+        print("na check each:",pd.isna(df).any().any())
+        if(pd.isna(df).any().any()):
+            input("to go")
         if type(df) == type(df_sd):
             df_sd = pd.concat([df_sd, df])
-        date += datetime.timedelta(days=1)
-
+        date += timedelta(days=1)
+    print(df_sd.columns)
+    df_sd.to_hdf(filename,key= 's')
+    print("check na",pd.isna(df_sd).any().any())
+    #print(df_sd[pd.isna(df_sd)])
     for e in df_sd.columns:
         #print(e)
-        if e != None and e != '證券名稱' and e != '證券代號' and e != '自營商買進股數(避險)' and e != 'datetime':
+        if e != None and e != '證券名稱' and e != '證券代號'  and e != 'datetime':
+            print("run string to num",e)
+            #print(df_sd[e])
             df_sd[e] = df_sd[e].astype(np.int32)
     df_sd.to_hdf(filename,key= 's')
     return df_sd
+
+
+def update_sd(filename, end = datetime.now().date() ):
+    df = pd.read_hdf(filename)
+    last_date = df['datetime'].max().date() + datetime.timedelta(days=1)
+    new_df = build_sd_date(filename,last_date, end)
+    return  pd.concat([df, new_df])
 
 
 if __name__ == "__main__":

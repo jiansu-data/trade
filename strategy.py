@@ -306,7 +306,7 @@ class StrategyFramework(StrategyLogger):
         self.kd_tk = KD_Trick(strategy=self, datas=[self.kd])
         self.tks = [self.macd_tk ,self.rsi_tk ,self.kd_tk]
 
-    def trick_infomation(self):
+    def trick_information(self):
         for e in self.tks:
             print(e.name, "signal : ",e.signal(),"strength:",e.strength())
     def next(self):
@@ -373,22 +373,31 @@ class StrategyMA(StrategyLogger):
         self.ma_tk = MA_Trick(strategy=self, datas=[self.ma5])
         self.dd = DrawDown_Trick(5)
         self.kd = bt.ind.StochasticFull()
+        self.kd_tk = KD_Trick(strategy=self, datas=[self.kd])
         self.cci = bt.ind.CommodityChannelIndex()
+        #self.rsi = bt.ind.RelativeStrengthIndex(period =5)
 
-    def trick_infomation(self):
+    def trick_information(self):
         for e in self.tks:
             print(e.name, "signal : ", e.signal(), "strength:", e.strength())
 
     def next(self):
         if not self.runtrade(): return
+        down = self.dd.next(self.data.close[0] if self.position else 0, self.position)
         if not self.position:
             if self.ma_tk.cross_up(self.ma5.lines.sma, self.ma20.lines.sma):
-                #if self.kd.lines.percK[0]<80:
-                if self.cci.lines.cci[0] < 100:
+                #if self.kd.lines.percK[0]<85 \
+                if   self.cci.lines.cci[0] < 100 :#and self.rsi.lines.rsi[0]<70:
                     self.buy()
         else:
             if self.ma_tk.cross_down(self.ma5.lines.sma, self.ma20.lines.sma):
+                #or self.kd_tk.signal() == Trick.sg_down:
                 self.close()
+                return
+
+            if self.dd.signal() == Trick.sg_down:
+                self.close()
+                return
         """
         signal = self.ma_tk.signal()
 
@@ -422,7 +431,7 @@ class StrategyBBand(StrategyLogger):
 
         self.delay_buy = -1
         self.buy_price = 0
-    def trick_infomation(self):
+    def trick_information(self):
         return
         info = ""
         for e in self.tks:
