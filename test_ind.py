@@ -18,7 +18,8 @@ if not os.path.isdir(output_dir):
 
 
 def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_log = False,
-               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),taskname = None,save_result = True):
+               fromdate=datetime(2019, 1, 1),todate=datetime(2019, 12, 31),taskname = None,save_result = True,
+               live = False,commission = False):
     from datetime import datetime
     import backtrader as bt
     import helper.datah5 as datah5
@@ -39,7 +40,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     fromdate_date = fromdate - timedelta(days=60 )
     data0_df = datah5.datafromh5( stock_id=stock_id,fromdate=fromdate_date,todate=todate,ret_df = True)
     #print(data0_df)
-    cerebro.addstrategy(strategy,enddate=data0_df.index[-2],startdate=fromdate)
+    cerebro.addstrategy(strategy,enddate=data0_df.index[-2],startdate=fromdate,live = live)
     cerebro.adddata(bt.feeds.PandasData(dataname=data0_df))
     #cerebro.addsizer(bt.sizers.AllInSizer)
     #cerebro.addanalyzer(bt.analyzers.AnnualReturn)
@@ -47,10 +48,10 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
     cerebro.addanalyzer(EvalAnalyzer.TradeAnalyzerPercentage)
     cerebro.addanalyzer(bt.analyzers.Returns)
     cerebro.addanalyzer(bt.analyzers.Transactions)
-    """
-    cerebro.broker.setcommission(commission=0.001425,name = ".buy") ## this is an approach
-    cerebro.broker.setcommission(commission=0.003,name = ".sell") ## this is an approach
-    """
+    if commission:
+        cerebro.broker.setcommission(commission=0.001425,name = ".buy") ## this is an approach
+        cerebro.broker.setcommission(commission=0.003,name = ".sell") ## this is an approach
+
     #cerebro.addanalyzer(bt.analyzers.PyFolio)
     #cerebro.addanalyzer(EvalAnalyzer.MDDPercentage)
     global output_dir

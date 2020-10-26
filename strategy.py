@@ -24,6 +24,7 @@ class StrategyLogger(bt.SignalStrategy):
     params = (
         ('enddate', None),
         ('startdate',None),
+        ('live', False)
         #('order_requests',collections.OrderedDict())
     )
     def order_requests(self, order_datetime, order_type,order_num, order_price):
@@ -45,10 +46,13 @@ class StrategyLogger(bt.SignalStrategy):
         #self.log("buy")
         self.order_date = self.datas[0].datetime.date(0)
         super().buy(*args,**kwargs)
+        self.live_check('buy')
     def sell(self,*args,**kwargs):
         #self.log("sell")
         self.order_date = self.datas[0].datetime.date(0)
+        self.live_check('sell')
         super().sell(*args,**kwargs)
+        self.live_check('close')
     def close(self,*args,**kwargs):
         #self.log("close")
         self.order_date = self.datas[0].datetime.date(0)
@@ -88,7 +92,7 @@ class StrategyLogger(bt.SignalStrategy):
             return False
 
     def endtrade(self):
-        if  self.position:
+        if  self.position and not self.params.live:
             if self.params.enddate and self.datas[0].datetime.date(0) == self.params.enddate.date():
                 self.log('LAST CLOSE, %.2f' % self.data.close[0])
                 self.close()
@@ -106,6 +110,11 @@ class StrategyLogger(bt.SignalStrategy):
         #print(trade)
         self.log('OPERATION PROFIT, GROSS %.2f, NET %.2f' %
                  (trade.pnl, trade.pnlcomm))
+    def live_check(self,information):
+        if self.params.live and   self.params.enddate and self.datas[0].datetime.date(0) == self.params.enddate.date():
+            dt = self.datas[0].datetime.date(0)
+            print('LIVE: %s, %s' % (dt.isoformat(), information))
+            if self.log_file: print('LIVE %s, %s' % (dt.isoformat(), information), file=self.log_file)
 
 class Trick:
     sg_tp = ["+" , "-" , ""]
