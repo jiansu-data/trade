@@ -77,7 +77,7 @@ def test_stock(stock_id,result_show = False,strategy = BBS,plot = False,enable_l
 
     #print(session_dict['orders'])
     #strats[0].params.order_requests = collections.OrderedDict()
-    if plot:cerebro.plot()
+    if plot:cerebro.plot(style='candlestick')
     if log_fp: log_fp.close()
     fn = output_dir+"/"+taskname+"/"+"%s_%s_%s.pickle" %(stock_id,str(fromdate.date()),str(todate.date()))
     print(fn)

@@ -170,7 +170,8 @@ def build_sd_date(filename,start, end):
 
         print("na check each:",pd.isna(df).any().any())
         if(pd.isna(df).any().any()):
-            input("to go")
+            print("to go,retry")
+            continue
         if type(df) == type(df_sd):
             df_sd = pd.concat([df_sd, df])
         date += timedelta(days=1)
