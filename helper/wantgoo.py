@@ -5,18 +5,20 @@ import pandas as pd
 
 
 class wantgoo:
-    def __init__(self, browser=None):
+    def __init__(self, browser=None,chrome_path = None):
         if not browser:
             options = Options()
             options.add_argument("--disable-notifications")
-
-            browser = webdriver.Chrome('../reference/chromedriver', chrome_options=options)
+            if chrome_path:
+                browser = webdriver.Chrome(chrome_path, chrome_options=options)
+            else:
+                browser = webdriver.Chrome(chrome_options=options)
         self.browser = browser
         self.links = None
         self.support_link = ['利潤比率', '報酬率', '杜邦分析', '營運週轉能力', '固定資產週轉', '總資產週轉', '營運週轉天數',
                              '營業現金流對淨利比', '現金股利發放率', '負債佔資產比', '長期資金佔固定資產比', '流速動比率',
                              '利息保障倍數', '現金流量分析', '盈餘再投資比率', '毛利成長率', '營業利益成長率', '稅後淨利成長率', '每股淨值', '損益表', '資產負債表',
-                             '股東權益', '現金流量表', '股利政策', '本益比', '股價淨值比', '每月營收', '每股盈餘']
+                             '股東權益', '現金流量表', '股利政策', '本益比', '股價淨值比', '每月營收', '每股盈餘','現金殖利率']
 
     def get_stock_page(self, stock):
         first_page = "https://www.wantgoo.com/stock/%s?searchType=stocks" % (stock)
@@ -113,7 +115,10 @@ class wantgoo:
         # table = chrome.find_element_by_class_name("br-trl")
         # table.get_attribute('innerHTML').split("\n")
         table = self.browser.find_element_by_tag_name("table")
-        # print(table.get_attribute('innerHTML').split("\n"))
+        if  self.browser.find_elements_by_class_name("nodata"):
+            print("no data")
+            return None
+        #print(table.get_attribute('innerHTML').split("\n"))
 
         # hd_tr.get_attribute('innerHTML')
         hds = header(table)
@@ -151,10 +156,41 @@ class wantgoo:
         if table == '每股盈餘': poster = self.eps_poster
         # if table == '股價淨值比':
         return self._get_table(header, poster)
+
     def __del__(self):
-        self.browser.close()
+        #self.browser.close()
+        pass
+
+    def get_quater_report(self):
+        quater_report = ['每股盈餘', '現金流量表', '損益表', '資產負債表', '每股淨值', '利潤比率', '報酬率', '杜邦分析', '流速動比率']
+        #quater_report = ['每股盈餘','流速動比率']
+        df = None
+        for e in quater_report:
+            print("get",e)
+            df_ = self.get_table(e)
+            if type(df_) == type(None):
+                continue
+            df_["年度/季別"] = df_["年度/季別"].apply(lambda x: x.replace(" ", ""))
+            #print(df_)
+            if type(df) == type(None):
+                df = df_.copy()
+            else:
+                #print("df source",df)
+                df = pd.merge(df,df_)
+            #print("df_result,", df)
+            time.sleep(1)
+        df = df.rename(
+            columns={'營業利益率%<br>(累計)': '營業利益率%(累計)', '稅前淨利率%<br>(累計)': '稅前淨利率%(累計)', '稅後淨利率%<br>(累計)': '稅後淨利率%(累計)'})
+
+        return df
+
+
 if __name__ == "__main__":
     w = wantgoo()
     w.get_stock_page('2330')
-    df = w.get_table('每月營收')
+    df = w.get_table('現金殖利率')
+    quater_report = ['每股盈餘','現金流量表','損益表','資產負債表','每股淨值','利潤比率','報酬率','杜邦分析','流速動比率']
+    quater_report = [ '本益比', '股價淨值比','現金殖利率']
+    #營運週轉能力,固定資產週轉,總資產週轉,營運週轉天數,營業現金流對淨利比  ,負債佔資產比', '長期資金佔固定資產比','毛利成長率', '營業利益成長率', '稅後淨利成長率'
+    #股東權益
     print(df)
