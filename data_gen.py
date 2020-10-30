@@ -33,5 +33,7 @@ if __name__ == "__main__":
             df =pd.concat([df,df_])
             print(df)
             #break
+        df.to_hdf("data/finance_quater.h5")
+        df.to_excel("data/finance_quater.xls")
 
 

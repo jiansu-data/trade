@@ -165,9 +165,14 @@ class wantgoo:
         quater_report = ['每股盈餘', '現金流量表', '損益表', '資產負債表', '每股淨值', '利潤比率', '報酬率', '杜邦分析', '流速動比率']
         #quater_report = ['每股盈餘','流速動比率']
         df = None
+        #while len(quater_report) >= 0:
         for e in quater_report:
+            #e = quater_report.pop(0)
             print("get",e)
-            df_ = self.get_table(e)
+            try:
+                df_ = self.get_table(e)
+            except:
+                df_ = self.get_table(e)
             if type(df_) == type(None):
                 continue
             df_["年度/季別"] = df_["年度/季別"].apply(lambda x: x.replace(" ", ""))
