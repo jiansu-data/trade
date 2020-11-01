@@ -18,11 +18,11 @@ if __name__ == "__main__":
         datah5.update_sd("data/sanda.h5")
 
     if c == 'q':
-        t50 = pd.read_csv("data/t50.csv",header=None)
+        t50 = pd.read_csv("data/tw50_100.csv")
         #print(t50)
         w = wantgoo.wantgoo()
         df = pd.DataFrame()
-        for e in t50[0]:
+        for e in t50['stock']:
         #for e in ["2881","2330",]:
         #if 1:
             #e = "6409"
