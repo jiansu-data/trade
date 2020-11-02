@@ -2,8 +2,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import time
 import pandas as pd
-
-
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 class wantgoo:
     def __init__(self, browser=None,chrome_path = None):
         if not browser:
@@ -23,7 +24,8 @@ class wantgoo:
     def get_stock_page(self, stock):
         first_page = "https://www.wantgoo.com/stock/%s?searchType=stocks" % (stock)
         self.browser.get(first_page)
-        time.sleep(5)
+        #time.sleep(2)
+        self.browser.implicitly_wait(5)
         self.get_links()
 
     def list_link(self, element):
@@ -36,9 +38,12 @@ class wantgoo:
         return {element.get_attribute('textContent'): link.get_attribute('href')}
 
     def get_links(self):
+
         chrome = self.browser
         _ = chrome.find_elements_by_class_name("sub-menu")
         _ = chrome.find_elements_by_class_name("index-menu")
+        locator = (By.CLASS_NAME, 'index-menu')
+        WebDriverWait(self.browser, 30, 0.5).until(EC.presence_of_element_located(locator))
         dict_link = {}
         # print(_[0].get_attribute('innerHTML').split("\n"))
         for e in _[0].find_elements_by_tag_name("li"):
@@ -68,6 +73,8 @@ class wantgoo:
 
     def go_table(self, table):
         self.browser.get(self.links[table])
+        #time.sleep(1)
+        self.browser.implicitly_wait(5)
 
     def month_header(self, table):
         header = table.find_element_by_class_name("thd")
@@ -114,6 +121,7 @@ class wantgoo:
         # print(page)
         # table = chrome.find_element_by_class_name("br-trl")
         # table.get_attribute('innerHTML').split("\n")
+        #self.browser.
         table = self.browser.find_element_by_tag_name("table")
         if  self.browser.find_elements_by_class_name("nodata"):
             print("no data")
@@ -152,13 +160,14 @@ class wantgoo:
         header = self.normal_header
         poster = None
         self.go_table(table)
+        time.sleep(2)
         if table == '每月營收': header = self.month_header
         if table == '每股盈餘': poster = self.eps_poster
         # if table == '股價淨值比':
         return self._get_table(header, poster)
 
     def __del__(self):
-        #self.browser.close()
+        self.browser.close()
         pass
 
     def get_quater_report(self):
@@ -185,8 +194,9 @@ class wantgoo:
             #print("df_result,", df)
             time.sleep(1)
         df = df.rename(
-            columns={'營業利益率%<br>(累計)': '營業利益率%(累計)', '稅前淨利率%<br>(累計)': '稅前淨利率%(累計)', '稅後淨利率%<br>(累計)': '稅後淨利率%(累計)'})
-
+            columns={'營業利益率%<br>(累計)': '營業利益率%(累計)', '稅前淨利率%<br>(累計)': '稅前淨利率%(累計)', '稅後淨利率%<br>(累計)': '稅後淨利率%(累計)','毛利率%<br>(累計)':'毛利率%(累計)'})
+        del df['年增率%']
+        del df['季增率%']
         return df
 
 
